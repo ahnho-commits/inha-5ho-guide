@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>5호관 길찾기</title>
+<style>
+/* Light, high-contrast on purpose: this is read outdoors in daylight. */
+:root {
+  color-scheme: light;
+  --bg: #F3F4F6; --card: #FFFFFF; --ink: #0B0F19; --muted: #4B5563; --line: #D1D5DB;
+  --route: #1D4ED8; --route-case: #FFFFFF; --done: #9CA3AF; --me: #1D4ED8; --dest: #EA580C;
+  --warn-bg: #FEF3C7; --warn-ink: #78350F; --bad: #B91C1C;
+  --ground: #EEF0F3; --bldg: #D9DDE4; --bldg-edge: #B8BFCA; --main: #FDE7D3; --main-edge: #EA580C;
+  --road: #FFFFFF; --road-edge: #C9CED6; --foot: #FFFFFF; --pitch: #CDEBD3; --track: #E8B7A3;
+  --f: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f); -webkit-tap-highlight-color: transparent; overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--dest); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+#map { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; background: var(--ground); display: block; }
+
+.top { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)); pointer-events: none; display: flex; flex-direction: column; gap: 8px; }
+.top > * { pointer-events: auto; }
+.instr { background: var(--ink); color: #fff; border-radius: 16px; padding: 14px 16px; display: grid; grid-template-columns: 56px 1fr; gap: 4px 12px; align-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.instr .icon { grid-row: 1 / 3; width: 56px; height: 56px; border-radius: 14px; background: var(--route); display: grid; place-items: center; }
+.instr .icon svg { width: 34px; height: 34px; }
+.instr .dist { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.instr .say { font-size: 20px; font-weight: 700; line-height: 1.3; }
+.instr .meta { grid-column: 1 / -1; font-size: 14px; color: #D1D5DB; border-top: 1px solid rgba(255,255,255,.18); padding-top: 8px; margin-top: 4px; display: flex; justify-content: space-between; gap: 8px; }
+.banner { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.banner button { border: 0; background: var(--warn-ink); color: #fff; border-radius: 8px; padding: 8px 10px; font-size: 14px; font-weight: 700; flex: none; }
+.badge { align-self: flex-start; background: var(--dest); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; }
+
+.fabs { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 8px; }
+.fab { width: 48px; height: 48px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 20px; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.15); display: grid; place-items: center; }
+.fab svg { width: 24px; height: 24px; }
+
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 20px 20px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.18); padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 12px; max-height: 78vh; overflow-y: auto; }
+.sheet h1 { font-size: 24px; margin: 0; line-height: 1.3; }
+.sheet h2 { font-size: 20px; margin: 0; }
+.sheet p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--muted); }
+.sheet .lead { color: var(--ink); }
+.label { font-size: 14px; font-weight: 700; color: var(--muted); }
+.chips { display: flex; flex-direction: column; gap: 8px; }
+.chip { text-align: left; border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 8px 12px; min-height: 48px; }
+.chip b { display: block; font-size: 17px; }
+.chip span { font-size: 13px; color: var(--muted); }
+.sheet .chips { gap: 6px; }
+#s-start { gap: 10px; }
+.chip[aria-pressed="true"] { border-color: var(--route); background: #EFF6FF; }
+.btn { border: 0; border-radius: 14px; min-height: 54px; padding: 14px; font-size: 18px; font-weight: 800; background: var(--route); color: #fff; width: 100%; }
+.btn.alt { background: var(--bg); color: var(--ink); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.privacy { background: var(--bg); border-radius: 12px; padding: 12px; font-size: 15px; line-height: 1.55; color: var(--ink); }
+.steps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--ink); }
+.credit { position: fixed; left: 6px; bottom: 2px; font-size: 10px; color: var(--muted); pointer-events: none; }
+
+svg text { font-family: var(--f); }
+svg .lbl { paint-order: stroke; stroke: #fff; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+<svg id="map" role="img" aria-label="인하대 캠퍼스 지도"></svg>
+
+<div class="top">
+  <div class="instr" id="instr" hidden aria-live="polite">
+    <div class="icon" id="i-icon"></div>
+    <div class="dist" id="i-dist"></div>
+    <div class="say" id="i-say"></div>
+    <div class="meta"><span id="i-to"></span><span id="i-eta"></span></div>
+  </div>
+  <div class="banner" id="banner" hidden><span id="banner-text"></span><button id="banner-btn" hidden></button></div>
+  <span class="badge" id="sim-badge" hidden>시뮬레이션으로 걷는 중</span>
+</div>
+
+<div class="fabs" id="fabs">
+  <button class="fab" id="zoom-in" aria-label="확대">+</button>
+  <button class="fab" id="zoom-out" aria-label="축소">−</button>
+  <button class="fab" id="recenter" aria-label="현위치로" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+  <button class="fab" id="compass" aria-label="내가 보는 방향 표시" hidden><svg viewBox="0 0 24 24"><path d="M12 3l5 16-5-3-5 3z" fill="currentColor"/></svg></button>
+</div>
+
+<!-- 1. Start -->
+<section class="sheet" id="s-start">
+  <h1>5호관 어디로 가세요?</h1>
+  <p class="lead">5호관은 <b>5동·5서·5남·5북</b> 네 건물이라 가는 곳마다 입구가 달라요.</p>
+  <div class="chips" id="dests"></div>
+  <button class="btn" id="go-gps">내 위치로 길찾기</button>
+  <button class="btn alt" id="go-manual">위치 없이 출발지 고르기</button>
+  <p class="note">위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않아요.</p>
+</section>
+
+<!-- 2. Before asking for location -->
+<section class="sheet" id="s-ask" hidden>
+  <h2>내 위치를 지도에 표시할게요</h2>
+  <div class="privacy">이 페이지는 내 위치를 지도에 표시하기 위해 휴대폰의 위치 기능을 사용합니다. 위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않습니다. 언제든 브라우저 설정에서 위치 권한을 끌 수 있습니다.</div>
+  <p>다음 화면에서 <b>허용</b>을 눌러 주세요. 건물 사이에서는 위치가 10~30m 정도 틀릴 수 있어요.</p>
+  <button class="btn" id="ask-ok">위치 허용하고 시작</button>
+  <button class="btn alt" data-back>돌아가기</button>
+</section>
+
+<!-- 3. Location refused -->
+<section class="sheet" id="s-denied" hidden>
+  <h2>위치를 쓸 수 없어요</h2>
+  <p id="denied-why">위치 권한이 꺼져 있어요. 다시 켜려면:</p>
+  <ul class="steps" id="denied-steps"></ul>
+  <button class="btn" id="denied-manual">출발지 직접 고르기</button>
+  <button class="btn alt" id="denied-retry">다시 시도</button>
+</section>
+
+<!-- 4. Pick a start without GPS -->
+<section class="sheet" id="s-manual" hidden>
+  <h2>지금 어디에 있어요?</h2>
+  <div class="chips" id="starts"></div>
+  <button class="btn alt" data-back>돌아가기</button>
+</section>
+
+<!-- 5. Route ready (manual start) -->
+<section class="sheet" id="s-route" hidden>
+  <h2 id="route-title"></h2>
+  <p id="route-sub"></p>
+  <div class="row"><button class="btn alt" id="prev-step">이전 안내</button><button class="btn" id="next-step">다음 안내</button></div>
+  <button class="btn alt" id="simulate">걸어보기 (시뮬레이션)</button>
+  <button class="btn alt" data-back>처음으로</button>
+</section>
+
+<!-- 6. Navigating with GPS -->
+<section class="sheet" id="s-nav" hidden>
+  <div class="row"><button class="btn alt" id="nav-overview">전체 경로 보기</button><button class="btn alt" id="nav-stop">안내 끝내기</button></div>
+</section>
+
+<!-- 6b. Far from campus -->
+<section class="sheet" id="s-far" hidden>
+  <h2>인하대 근처에서만 안내해요</h2>
+  <p class="lead" id="far-dist"></p>
+  <p>인하대역(수인분당선)까지는 지도 앱으로 오시고, 캠퍼스 근처에서 다시 켜 주세요. 위치 확인은 멈췄어요.</p>
+  <button class="btn" id="far-manual">출발지 직접 고르기</button>
+  <div class="row"><button class="btn alt" id="far-retry">다시 확인</button><button class="btn alt" data-back>처음으로</button></div>
+</section>
+
+<!-- 7. Arrived -->
+<section class="sheet" id="s-arrived" hidden>
+  <h1>도착했어요</h1>
+  <p class="lead" id="arrived-text"></p>
+  <p>건물 안 호실 안내는 다음 업데이트에서 이어져요.</p>
+  <button class="btn" data-back>처음으로</button>
+</section>
+
+<span class="credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
+
+<script src="campus-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
