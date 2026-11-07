@@ -317,7 +317,7 @@ function centerOnMe() {
 let selectedDest = 'south', mode = null;
 // target: the indoor node we are heading for. phase: outdoor map or indoor floor plan.
 let target = null, phase = 'outdoor', plan = null, inStep = 0, indoorFrom = null;
-const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-arrived', 's-inside', 's-indoor'];
+const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-inside', 's-indoor'];
 function sheet(id) {
   for (const s of SHEETS) $(s).hidden = s !== id;
   placeFabs();
@@ -548,17 +548,11 @@ function arrive() {
   stopGPS();
   stopSim();
   progress = route.total;
-  $('instr').hidden = true;
-  $('compass').hidden = true;
-  $('sim-badge').hidden = true;
-  banner('');
-  const d = C.pois['dest:' + route.dest];
-  $('arrived-text').textContent = `${d.name}${d.sub ? ' · ' + d.sub : ''}`;
-  $('indoor-go').textContent = t('indoor_start_btn');
-  indoorFrom = 'ENT:' + route.dest;
   if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
-  sheet('s-arrived');
-  fit([route.pts[route.pts.length - 1], ...(me ? [me.p] : [])]);
+  // Outside leg done: carry straight on with the floors inside.
+  enterIndoor('ENT:' + route.dest);
+  banner(t('arrived_banner', { entrance: C.pois['dest:' + route.dest].name }));
+  setTimeout(() => banner(''), 4000);
 }
 
 // ---------- compass ----------
@@ -697,17 +691,16 @@ function showIndoor() {
   $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
   $('in-prev').disabled = inStep === 0;
   $('in-next').textContent = inStep === plan.steps.length - 1 ? '처음으로' : '다음';
-  fit(st.f > 5 ? [[60, -4], [100, 30]] : st.f === 0 ? [[72, 8], [104, 92]] : [[2, 2], [98, 98]], 24, 40);
+  fit(Indoor.viewBounds(plan, inStep), 24, 80);
 }
 function drawIndoor() {
   const k = mPerPx(), h = view.w * aspect();
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
-  svg.innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawFloor(plan.steps[inStep].f, k, plan, inStep);
+  svg.innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep);
 }
 $('in-prev').onclick = () => { if (inStep > 0) { inStep--; showIndoor(); } };
 $('in-next').onclick = () => { if (inStep < plan.steps.length - 1) { inStep++; showIndoor(); } else reset(); };
 $('nw').onchange = () => { if (phase === 'indoor') enterIndoor(indoorFrom); };
-$('indoor-go').onclick = () => enterIndoor(indoorFrom);
 $('go-inside').onclick = openInside;
 $('inside-go').onclick = () => enterIndoor(insideStart());
 $('near').oninput = () => {

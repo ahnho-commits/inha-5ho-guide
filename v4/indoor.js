@@ -126,61 +126,93 @@ const Indoor = (() => {
     return steps;
   }
 
-  // Draw one floor. k = map units per screen pixel, so strokes and text stay readable at any zoom.
-  function drawFloor(f, k, plan, stepIdx) {
-    let s = '';
-    const band = 7;
-    if (f === 0) {
-      s += `<rect x="${HI - band / 2}" y="${LO}" width="${band}" height="${HI - LO}" rx="2" fill="#fff" stroke="var(--road-edge)" stroke-width="${k}"/>`;
-      s += `<text class="lbl" x="${HI - 8}" y="50" font-size="${13 * k}" font-weight="800" fill="var(--muted)" stroke-width="${3 * k}" text-anchor="end">5동 지하</text>`;
-    } else {
-      s += `<rect x="${LO + band / 2}" y="${LO + band / 2}" width="${HI - LO - band}" height="${HI - LO - band}" fill="var(--pitch)" opacity=".5"/>`;
-      s += `<rect x="${LO}" y="${LO}" width="${HI - LO}" height="${HI - LO}" fill="none" stroke="var(--road-edge)" stroke-width="${band + 1}"/>`;
-      s += `<rect x="${LO}" y="${LO}" width="${HI - LO}" height="${HI - LO}" fill="none" stroke="#fff" stroke-width="${band}"/>`;
-      if (f === 1) s += `<line x1="${LO}" y1="${LO + 4}" x2="${LO}" y2="${HI - 4}" stroke="var(--ground)" stroke-width="${band + 2}"/>`;
-      for (const [w, x, y] of [['N', 50, LO + 12], ['E', HI - 12, 50], ['S', 50, HI - 9], ['W', LO + 12, 50]]) {
-        if (f === 1 && w === 'W') continue;
-        s += `<text class="lbl" x="${x}" y="${y}" font-size="${16 * k}" font-weight="800" fill="var(--ink)" stroke-width="${3 * k}" text-anchor="middle">${t('wing_' + w)}</text>`;
-      }
-      if (f > 5) s += `<rect x="${HI - 6}" y="${LO - 12}" width="12" height="12" rx="2" fill="var(--main)" stroke="var(--main-edge)" stroke-width="${1.5 * k}"/>`;
-    }
-    for (const n of NODES.values()) {
-      if (n.f !== f || n.kind !== 'room') continue;
-      s += `<circle cx="${n.x}" cy="${n.y}" r="${2.2 * k}" fill="var(--bldg-edge)"/>`;
-    }
-    for (const n of NODES.values()) {
-      if (n.f !== f || n.kind !== 'stair') continue;
-      s += `<rect x="${n.x - 3 * k}" y="${n.y - 3 * k}" width="${6 * k}" height="${6 * k}" fill="var(--muted)"/>`;
-    }
-    if (f === 1) for (const n of NODES.values()) if (n.kind === 'entrance') s += `<circle cx="${n.x}" cy="${n.y}" r="${5 * k}" fill="var(--ink)"/>`;
+  // 3D view: floors stacked on top of each other, the current one solid, the route in blue.
+  const H = 26;                                   // screen height of one floor
+  const zOf = f => (f - 1) * H;
+  const iso = (x, y, z) => [(x - y) * 0.866, (x + y) * 0.5 - z];
+  const P = (x, y, z) => iso(x, y, z).map(v => v.toFixed(1)).join(',');
+  const B = 4;                                    // half the corridor width
+  const SHAPES = {
+    ring: { x0: LO - B, y0: LO - B, x1: HI + B, y1: HI + B, hole: [LO + B, LO + B, HI - B, HI - B] },
+    b1: { x0: HI - B, y0: LO - B, x1: HI + B, y1: HI + B },
+    tower: { x0: HI - 6, y0: LO - 14, x1: HI + 6, y1: LO - 2 },
+  };
+  const shapeOf = f => f === 0 ? SHAPES.b1 : f > 5 ? SHAPES.tower : SHAPES.ring;
+  const at = id => { const n = node(id); return iso(n.x, n.y, zOf(n.f)); };
 
-    // Route: every part on this floor faint, the current step bold.
-    const onFloor = id => node(id).f === f;
-    const segs = [];
-    plan.steps.forEach((st, i) => {
-      const pts = st.ids.filter(onFloor).map(node);
-      if (pts.length > 1) segs.push({ pts, now: i === stepIdx });
-    });
-    for (const sg of segs) {
-      const d = 'M' + sg.pts.map(n => `${n.x} ${n.y}`).join('L');
-      s += `<path d="${d}" fill="none" stroke="${sg.now ? 'var(--route-case)' : 'none'}" stroke-width="${11 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
-      s += `<path d="${d}" fill="none" stroke="var(--route)" stroke-opacity="${sg.now ? 1 : .3}" stroke-width="${(sg.now ? 7 : 5) * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  function slab(sh, z, op, t) {
+    const { x0, y0, x1, y1, hole } = sh;
+    let s = `<g opacity="${op}">`;
+    s += `<polygon fill="var(--side)" points="${P(x0, y1, z)} ${P(x1, y1, z)} ${P(x1, y1, z - t)} ${P(x0, y1, z - t)}"/>`;
+    s += `<polygon fill="var(--side2)" points="${P(x1, y0, z)} ${P(x1, y1, z)} ${P(x1, y1, z - t)} ${P(x1, y0, z - t)}"/>`;
+    let d = `M${P(x0, y0, z)}L${P(x1, y0, z)}L${P(x1, y1, z)}L${P(x0, y1, z)}Z`;
+    if (hole) {
+      const [a, b, c, e] = hole;
+      s += `<polygon fill="var(--side2)" points="${P(a, b, z)} ${P(c, b, z)} ${P(c, b, z - t)} ${P(a, b, z - t)}"/>`;
+      s += `<polygon fill="var(--side)" points="${P(a, b, z)} ${P(a, e, z)} ${P(a, e, z - t)} ${P(a, b, z - t)}"/>`;
+      d += `M${P(a, b, z)}L${P(c, b, z)}L${P(c, e, z)}L${P(a, e, z)}Z`;
     }
+    return s + `<path fill-rule="evenodd" fill="#fff" stroke="var(--bldg-edge)" stroke-width=".6" d="${d}"/></g>`;
+  }
+
+  function drawIso(k, plan, stepIdx) {
     const cur = plan.steps[stepIdx];
-    const tag = (n, text, fill) => {
-      const w = (text.length * 12 + 16) * k, h = 22 * k;
-      return `<g transform="translate(${n.x} ${n.y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
+    const floors = [...new Set([1, 2, 3, 4, 5, ...plan.path.map(id => node(id).f)])].sort((a, b) => a - b);
+    const top = Math.max(cur.f, cur.from ?? -1);
+    let s = '';
+    for (const f of floors) {
+      const op = f === cur.f ? 1 : f === cur.from ? .6 : f < top ? .22 : .07;
+      s += slab(shapeOf(f), zOf(f), op, f === cur.f ? 4 : 2.5);
+      if (f !== cur.f) continue;
+      const z = zOf(f);
+      for (const n of NODES.values()) {
+        if (n.f !== f || n.kind === 'entrance') continue;
+        const [x, y] = iso(n.x, n.y, z);
+        s += n.kind === 'stair'
+          ? `<rect x="${x - 2.4 * k}" y="${y - 2.4 * k}" width="${4.8 * k}" height="${4.8 * k}" fill="var(--muted)"/>`
+          : `<circle cx="${x}" cy="${y}" r="${1.8 * k}" fill="var(--bldg-edge)"/>`;
+      }
+      if (f >= 1 && f <= 5) {
+        for (const [w, x, y] of [['N', 50, LO], ['E', HI, 50], ['S', 50, HI], ['W', LO, 50]]) {
+          if (f === 1 && w === 'W') continue;
+          const [px, py] = iso(x, y, z);
+          s += `<text class="lbl" x="${px}" y="${py - 7 * k}" font-size="${14 * k}" font-weight="800" fill="var(--ink)" stroke-width="${3 * k}" text-anchor="middle">${t('wing_' + w)}</text>`;
+        }
+      }
+      // floor name just left of the slab's top corner, where it can't run off screen
+      const sh = shapeOf(f), [fx, fy] = iso(sh.x0, sh.y0, z);
+      s += `<text class="lbl" x="${fx - 14 * k}" y="${fy + 6 * k}" font-size="${18 * k}" font-weight="800" fill="var(--route)" stroke-width="${3 * k}" text-anchor="end">${floorName(f)}</text>`;
+    }
+    const line = ids => 'M' + ids.map(id => at(id).map(v => v.toFixed(1)).join(' ')).join('L');
+    s += `<path d="${line(plan.path)}" fill="none" stroke="var(--route)" stroke-opacity=".28" stroke-width="${4 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (cur.ids.length > 1) {
+      s += `<path d="${line(cur.ids)}" fill="none" stroke="var(--route-case)" stroke-width="${11 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      s += `<path d="${line(cur.ids)}" fill="none" stroke="var(--route)" stroke-width="${7 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    const tag = (id, text, fill) => {
+      const [x, y] = at(id), w = (text.length * 12 + 16) * k, h = 22 * k;
+      return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
     };
-    const start = node(plan.path[0]), end = node(plan.path[plan.path.length - 1]);
-    if (end.f === f) s += tag(end, label(end.id).replace(/^5[동서남북] /, ''), 'var(--dest)');
-    if (start.f === f && start !== end) s += tag(start, start.kind === 'entrance' ? '입구' : '출발', 'var(--ink)');
-    const here = cur.ids.map(node).filter(n => n.f === f);
-    if (here.length && cur.icon !== 'arrive') {
-      const n = here[here.length - 1];
-      if (n !== end) s += `<circle cx="${n.x}" cy="${n.y}" r="${8 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
+    const start = plan.path[0], end = plan.path[plan.path.length - 1];
+    if (start !== end) s += tag(start, node(start).kind === 'entrance' ? '입구' : '출발', 'var(--ink)');
+    s += tag(end, label(end).replace(/^5[동서남북] /, ''), 'var(--dest)');
+    if (cur.icon !== 'arrive') {
+      const [x, y] = at(cur.ids[cur.ids.length - 1]);
+      s += `<circle cx="${x}" cy="${y}" r="${8 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
     }
     return s;
   }
 
-  return { node, label, floorName, floorText, parseRoom, route, buildSteps, drawFloor, NODES };
+  // What the camera should keep in view for a step: the floor(s) involved and the step's own path.
+  function viewBounds(plan, stepIdx) {
+    const cur = plan.steps[stepIdx], pts = [];
+    for (const f of [cur.f, cur.from].filter(v => v !== undefined)) {
+      const sh = shapeOf(f), z = zOf(f);
+      for (const [x, y] of [[sh.x0, sh.y0], [sh.x1, sh.y0], [sh.x1, sh.y1], [sh.x0, sh.y1]]) pts.push(iso(x, y, z));
+    }
+    cur.ids.forEach(id => pts.push(at(id)));
+    return pts;
+  }
+
+  return { node, label, floorName, floorText, parseRoom, route, buildSteps, drawIso, viewBounds };
 })();
