@@ -58,6 +58,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn.alt { background: var(--bg); color: var(--ink); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field input { font: 700 22px var(--f); padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; width: 100%; color: var(--ink); background: var(--card); }
+.field input:focus { border-color: var(--route); outline: none; }
+.hint { font-size: 14px; color: var(--muted); min-height: 1.2em; }
+.hint.ok { color: var(--route); font-weight: 700; }
+.hint.bad { color: var(--bad); }
+.minis { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 8px 14px; font-size: 15px; font-weight: 700; min-height: 44px; }
+.mini[aria-pressed="true"] { border-color: var(--route); background: #EFF6FF; color: var(--route); }
+.btn:disabled { opacity: .4; cursor: default; }
+.check { display: flex; gap: 10px; align-items: center; font-size: 15px; min-height: 44px; }
+.check input { width: 22px; height: 22px; }
+.instr .meta span:first-child { flex: 1; }
 .privacy { background: var(--bg); border-radius: 12px; padding: 12px; font-size: 15px; line-height: 1.55; color: var(--ink); }
 .steps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--ink); }
 .credit { position: fixed; left: 6px; bottom: 2px; font-size: 10px; color: var(--muted); pointer-events: none; }
@@ -90,10 +103,15 @@ svg .lbl { paint-order: stroke; stroke: #fff; stroke-linejoin: round; }
 <!-- 1. Start -->
 <section class="sheet" id="s-start">
   <h1>5호관 어디로 가세요?</h1>
-  <p class="lead">5호관은 <b>5동·5서·5남·5북</b> 네 건물이라 가는 곳마다 입구가 달라요.</p>
-  <div class="chips" id="dests"></div>
-  <button class="btn" id="go-gps">내 위치로 길찾기</button>
-  <button class="btn alt" id="go-manual">위치 없이 출발지 고르기</button>
+  <p class="lead">5호관은 <b>5동·5서·5남·5북</b> 네 건물이라 <b>5남 309와 5동 309는 다른 방</b>이에요.</p>
+  <div class="field">
+    <input id="room" inputmode="text" autocomplete="off" aria-label="강의실 번호">
+    <span class="hint" id="room-hint"></span>
+  </div>
+  <div class="minis" id="quick"></div>
+  <div class="minis" id="tower-floors" hidden></div>
+  <button class="btn" id="go-gps" disabled>내 위치로 길찾기</button>
+  <div class="row"><button class="btn alt" id="go-manual" disabled>출발지 고르기</button><button class="btn alt" id="go-inside" disabled>이미 5호관 안</button></div>
   <p class="note">위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않아요.</p>
 </section>
 
@@ -136,6 +154,29 @@ svg .lbl { paint-order: stroke; stroke: #fff; stroke-linejoin: round; }
   <div class="row"><button class="btn alt" id="nav-overview">전체 경로 보기</button><button class="btn alt" id="nav-stop">안내 끝내기</button></div>
 </section>
 
+<!-- 5b. Already inside 5호관 -->
+<section class="sheet" id="s-inside" hidden>
+  <h2 id="inside-title"></h2>
+  <div class="field">
+    <span class="label" id="inside-near-label"></span>
+    <input id="near" inputmode="text" autocomplete="off">
+    <span class="hint" id="near-hint"></span>
+  </div>
+  <span class="label" id="inside-or"></span>
+  <div class="minis" id="pick-floor"></div>
+  <div class="minis" id="pick-wing"></div>
+  <button class="btn" id="inside-go" disabled></button>
+  <button class="btn alt" data-back>처음으로</button>
+</section>
+
+<!-- 5c. Indoor guidance -->
+<section class="sheet" id="s-indoor" hidden>
+  <div class="row"><button class="btn alt" id="in-prev">이전</button><button class="btn" id="in-next">다음</button></div>
+  <label class="check"><input type="checkbox" id="nw"> <span id="nw-label"></span></label>
+  <p class="note" id="in-note"></p>
+  <button class="btn alt" data-back>처음으로</button>
+</section>
+
 <!-- 6b. Far from campus -->
 <section class="sheet" id="s-far" hidden>
   <h2>인하대 근처에서만 안내해요</h2>
@@ -149,13 +190,16 @@ svg .lbl { paint-order: stroke; stroke: #fff; stroke-linejoin: round; }
 <section class="sheet" id="s-arrived" hidden>
   <h1>도착했어요</h1>
   <p class="lead" id="arrived-text"></p>
-  <p>건물 안 호실 안내는 다음 업데이트에서 이어져요.</p>
-  <button class="btn" data-back>처음으로</button>
+  <button class="btn" id="indoor-go"></button>
+  <button class="btn alt" data-back>처음으로</button>
 </section>
 
 <span class="credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
+<script src="i18n.js"></script>
 <script src="campus-data.js"></script>
+<script src="indoor-data.js"></script>
+<script src="indoor.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

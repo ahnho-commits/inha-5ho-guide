@@ -8,11 +8,6 @@ const svg = $('map');
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const project = (lat, lon) => [(lon - C.origin[1]) * C.kx, -(lat - C.origin[0]) * C.ky];
 
-const DESTS = {
-  south: { title: '5남 강의실 · 고사장', sub: '시계탑 아래 주출입구로 안내' },
-  corner: { title: '5동·5북 / 동아리방', sub: '쪽문 쪽 모서리 입구 (엘리베이터 바로 앞)' },
-  east: { title: '5동 강의실', sub: '60주년기념관 맞은편 5동 입구' },
-};
 const STARTS = {
   station: { title: '인하대역', sub: '4번 출구 · 운동장 바깥쪽으로 도는 길 (확인 중)' },
   main: { title: '정문', sub: '' },
@@ -107,7 +102,13 @@ function centroid(ring) {
 function buildRoute(from, destKey, startName) {
   const dest = C.pois['dest:' + destKey];
   const s = snap(from);
-  const path = shortest([[s.a, dist(s.q, N[s.a])], [s.b, dist(s.q, N[s.b])]], dest.node);
+  // From the station people walk the south and east sides of the field, not the shortest line.
+  const vias = dist(from, C.pois['start:station'].p) < 80 ? C.vias.station : [];
+  let path = shortest([[s.a, dist(s.q, N[s.a])], [s.b, dist(s.q, N[s.b])]], vias.length ? vias[0] : dest.node);
+  for (let i = 0; path && i < vias.length; i++) {
+    const leg = shortest([[vias[i], 0]], i + 1 < vias.length ? vias[i + 1] : dest.node);
+    path = leg && path.concat(leg.slice(1));
+  }
   if (!path) return null;
   const pts = [s.q], segKind = [];
   const firstKind = kinds.get(ekey(s.a, s.b)) || 0;
@@ -229,6 +230,7 @@ function pill(p, text, fill, k) {
 }
 
 function draw() {
+  if (phase === 'indoor') return drawIndoor();
   const k = mPerPx();
   const h = view.w * aspect();
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
@@ -313,7 +315,9 @@ function centerOnMe() {
 
 // ---------- screens ----------
 let selectedDest = 'south', mode = null;
-const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-arrived'];
+// target: the indoor node we are heading for. phase: outdoor map or indoor floor plan.
+let target = null, phase = 'outdoor', plan = null, inStep = 0, indoorFrom = null;
+const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-arrived', 's-inside', 's-indoor'];
 function sheet(id) {
   for (const s of SHEETS) $(s).hidden = s !== id;
   placeFabs();
@@ -337,10 +341,14 @@ const ICONS = {
   'slight-right': '<path d="M8 20V12l9-8M10 4h7v7"/>',
   'slight-left': '<path d="M16 20V12L7 4M14 4H7v7"/>',
   arrive: '<path d="M6 21V4M6 4h11l-2 4 2 4H6"/>',
+  up: '<path d="M4 20h5v-5h5v-5h5V5M15 5h4v4"/>',
+  down: '<path d="M4 5h5v5h5v5h5v5M19 16v4h-4"/>',
+  x: '<path d="M5 19L19 5M5 5l14 14"/>',
 };
+const iconSvg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.straight}</svg>`;
 function showInstr(step, distM) {
   $('instr').hidden = false;
-  $('i-icon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[step.dir] || ICONS.straight}</svg>`;
+  $('i-icon').innerHTML = iconSvg(step.dir);
   $('i-dist').textContent = step.dir === 'arrive' && distM < ARRIVE_M ? '도착' : `${Math.max(0, Math.round(distM / 5) * 5)}m`;
   $('i-say').textContent = step.text + (step.guess ? ' (경로 확인 중)' : '');
   const remain = route.total - progress;
@@ -351,14 +359,51 @@ function nextStepFrom(s) {
   return route.steps.find(st => st.at > s + 3) || route.steps[route.steps.length - 1];
 }
 
-function renderDests() {
-  $('dests').innerHTML = Object.entries(DESTS).map(([k, d]) => `<button class="chip" data-dest="${k}" aria-pressed="${k === selectedDest}"><b>${d.title}</b><span>${d.sub}</span></button>`).join('');
+// ---------- destination (an indoor node) ----------
+const TOWER_FLOORS = [6, 7, 8, 9, 10];
+function setTarget(tg) {
+  target = tg;
+  for (const id of ['go-gps', 'go-manual', 'go-inside']) $(id).disabled = !target;
+}
+function renderQuick() {
+  $('quick').innerHTML = [['B1:clubs', t('quick_b1')], ['tower', t('quick_tower') + ' ' + t('quick_tower_sub')]]
+    .map(([id, text]) => `<button class="mini" data-quick="${id}" aria-pressed="${!!target && (target.id === id || (id === 'tower' && target.id.startsWith('T:')))}">${text}</button>`).join('');
+  $('tower-floors').innerHTML = TOWER_FLOORS.map(f => `<button class="mini" data-tower="${f}" aria-pressed="${!!target && target.id === 'T:' + f}">${Indoor.label('T:' + f)}</button>`).join('');
+}
+function onRoomInput() {
+  const text = $('room').value.trim();
+  $('tower-floors').hidden = true;
+  if (!text) { setTarget(null); $('room-hint').textContent = ''; renderQuick(); return; }
+  const r = Indoor.parseRoom(text);
+  const hint = $('room-hint');
+  if (!r) { setTarget(null); hint.className = 'hint bad'; hint.textContent = t('room_unknown'); }
+  else if (!r.id) { setTarget(null); hint.className = 'hint bad'; hint.textContent = t('room_missing_none', { label: r.label }); }
+  else {
+    setTarget({ id: r.id, label: r.label });
+    hint.className = r.missing ? 'hint bad' : 'hint ok';
+    hint.textContent = r.missing ? t('room_missing', { label: r.label, near: r.near }) : r.decode;
+  }
+  renderQuick();
+}
+// The entrance that makes the whole walk shortest: outdoor metres plus the indoor route.
+function pickEntrance(from) {
+  let best = null;
+  for (const key of ['south', 'corner', 'east']) {
+    const out = buildRoute(from, key, '');
+    const ind = Indoor.route('ENT:' + key, target.id, { nw: $('nw').checked });
+    if (!out || !ind) continue;
+    const total = out.total + ind.cost * 6;
+    if (!best || total < best.total) best = { key, total };
+  }
+  return best ? best.key : 'south';
 }
 function renderStarts() {
   $('starts').innerHTML = Object.entries(STARTS).map(([k, d]) => `<button class="chip" data-start="${k}"><b>${d.title}</b>${d.sub ? `<span>${d.sub}</span>` : ''}</button>`).join('');
 }
 
 function reset() {
+  phase = 'outdoor';
+  plan = null;
   stopGPS();
   stopSim();
   route = null; me = null; heading = null; focusStep = null; progress = 0; mode = null;
@@ -462,6 +507,7 @@ function handleFix(p, acc) {
     else banner('');
   }
   if (!route) {
+    selectedDest = pickEntrance(p);
     route = buildRoute(p, selectedDest, '지금 위치');
     progress = 0;
     follow = true;
@@ -508,6 +554,8 @@ function arrive() {
   banner('');
   const d = C.pois['dest:' + route.dest];
   $('arrived-text').textContent = `${d.name}${d.sub ? ' · ' + d.sub : ''}`;
+  $('indoor-go').textContent = t('indoor_start_btn');
+  indoorFrom = 'ENT:' + route.dest;
   if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
   sheet('s-arrived');
   fit([route.pts[route.pts.length - 1], ...(me ? [me.p] : [])]);
@@ -546,6 +594,7 @@ function toManual() {
 }
 function startManual(key) {
   const start = C.pois['start:' + key];
+  selectedDest = pickEntrance(start.p);
   route = buildRoute(start.p, selectedDest, start.name);
   progress = 0;
   stepIdx = 0;
@@ -593,11 +642,93 @@ function stopSim() {
 }
 $('simulate').onclick = startSim;
 
+// ---------- indoor ----------
+const CENTRAL = { S: '5남 중앙 계단', E: '5동 중앙 계단', N: '5북 동쪽 중앙 계단', W: '5서 중앙 계단' };
+let insideFloor = null, insideWing = null, insideNear = null;
+function openInside() {
+  insideFloor = insideWing = insideNear = null;
+  $('near').value = '';
+  $('near-hint').textContent = '';
+  $('inside-title').textContent = t('inside_title');
+  $('inside-near-label').textContent = t('inside_near');
+  $('near').placeholder = t('inside_near_ph');
+  $('inside-or').textContent = t('inside_or');
+  $('inside-go').textContent = t('inside_start');
+  renderInsidePicks();
+  sheet('s-inside');
+}
+function renderInsidePicks() {
+  $('pick-floor').innerHTML = [0, 1, 2, 3, 4, 5].map(f => `<button class="mini" data-floor="${f}" aria-pressed="${insideFloor === f}">${Indoor.floorName(f)}</button>`).join('');
+  $('pick-wing').innerHTML = insideFloor === 0 ? '' : ['S', 'E', 'N', 'W'].filter(w => !(insideFloor === 1 && w === 'W'))
+    .map(w => `<button class="mini" data-wing="${w}" aria-pressed="${insideWing === w}">${t('wing_' + w)}</button>`).join('');
+  $('inside-go').disabled = !(insideNear || insideFloor === 0 || (insideFloor !== null && insideWing));
+}
+function insideStart() {
+  if (insideNear) return insideNear;
+  if (insideFloor === 0) return 'B1:clubs';
+  return `${CENTRAL[insideWing]}|${insideFloor}`;
+}
+function enterIndoor(from) {
+  stopGPS();
+  stopSim();
+  indoorFrom = from;
+  const r = Indoor.route(from, target.id, { nw: $('nw').checked });
+  if (!r) { banner(t('room_missing_none', { label: target.label })); return; }
+  plan = { path: r.path, steps: Indoor.buildSteps(r.path) };
+  phase = 'indoor';
+  inStep = 0;
+  me = null;
+  banner('');
+  $('compass').hidden = true;
+  $('recenter').hidden = true;
+  $('sim-badge').hidden = true;
+  $('nw-label').textContent = t('nw_toggle');
+  $('in-note').textContent = t('data_note');
+  sheet('s-indoor');
+  showIndoor();
+}
+function showIndoor() {
+  const st = plan.steps[inStep];
+  $('instr').hidden = false;
+  $('i-icon').innerHTML = iconSvg(st.icon);
+  $('i-dist').textContent = st.from !== undefined ? `${Indoor.floorName(st.from)} → ${Indoor.floorName(st.f)}` : Indoor.floorName(st.f);
+  $('i-say').textContent = st.title;
+  $('i-to').textContent = st.sub;
+  $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
+  $('in-prev').disabled = inStep === 0;
+  $('in-next').textContent = inStep === plan.steps.length - 1 ? '처음으로' : '다음';
+  fit(st.f > 5 ? [[60, -4], [100, 30]] : st.f === 0 ? [[72, 8], [104, 92]] : [[2, 2], [98, 98]], 24, 40);
+}
+function drawIndoor() {
+  const k = mPerPx(), h = view.w * aspect();
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
+  svg.innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawFloor(plan.steps[inStep].f, k, plan, inStep);
+}
+$('in-prev').onclick = () => { if (inStep > 0) { inStep--; showIndoor(); } };
+$('in-next').onclick = () => { if (inStep < plan.steps.length - 1) { inStep++; showIndoor(); } else reset(); };
+$('nw').onchange = () => { if (phase === 'indoor') enterIndoor(indoorFrom); };
+$('indoor-go').onclick = () => enterIndoor(indoorFrom);
+$('go-inside').onclick = openInside;
+$('inside-go').onclick = () => enterIndoor(insideStart());
+$('near').oninput = () => {
+  const r = Indoor.parseRoom($('near').value.trim());
+  insideNear = r && r.id && !r.missing ? r.id : null;
+  $('near-hint').className = insideNear ? 'hint ok' : 'hint';
+  $('near-hint').textContent = insideNear ? r.decode : '';
+  renderInsidePicks();
+};
+$('room').oninput = onRoomInput;
+$('room').placeholder = t('room_ph');
+
 // ---------- wiring ----------
 document.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
-  if (b.dataset.dest) { selectedDest = b.dataset.dest; renderDests(); draw(); }
+  if (b.dataset.quick === 'tower') { $('room').value = ''; $('room-hint').textContent = ''; setTarget(null); renderQuick(); $('tower-floors').hidden = false; }
+  else if (b.dataset.quick) { $('room').value = ''; $('room-hint').textContent = ''; $('tower-floors').hidden = true; setTarget({ id: b.dataset.quick, label: Indoor.label(b.dataset.quick) }); renderQuick(); }
+  else if (b.dataset.tower) { setTarget({ id: 'T:' + b.dataset.tower, label: Indoor.label('T:' + b.dataset.tower) }); renderQuick(); }
+  else if (b.dataset.floor) { insideFloor = +b.dataset.floor; insideWing = null; renderInsidePicks(); }
+  else if (b.dataset.wing) { insideWing = b.dataset.wing; renderInsidePicks(); }
   else if (b.dataset.start) startManual(b.dataset.start);
   else if (b.hasAttribute('data-back')) reset();
 });
@@ -620,6 +751,6 @@ $('nav-overview').onclick = () => { follow = false; $('recenter').hidden = !me; 
 $('nav-stop').onclick = reset;
 window.addEventListener('resize', () => { placeFabs(); draw(); });
 
-renderDests();
+renderQuick();
 renderStarts();
 reset();
