@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F4EEDF">
+<meta name="theme-color" content="#ECEFF3">
 <title>5호관 길찾기</title>
 <script>
 // GitHub Pages lets phones keep this page for 10 minutes. Ask for the current build number (never cached)
 // and reopen at a fresh address if this copy is older. Sends nothing but the request for version.txt.
 (function () {
-  var BUILD = 'd623386b';
+  var BUILD = '517c8f08';
   fetch('version.txt?' + Date.now(), { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (v) {
@@ -20,18 +20,18 @@
 })();
 </script>
 <style>
-/* A2 "크림과 세이지": cream ground, sage fields, terracotta route. Soft, rounded, still high-contrast text for daylight. */
+/* M1 "쿨 그레이": white blocks on grey ground, one blue for the route. Minimal and rounded, high-contrast text for daylight. */
 :root {
   color-scheme: light;
-  --bg: #F4EEDF; --card: #FFFDF8; --ink: #43301F; --muted: #7D6855; --line: #E6DACA;
-  --route: #D9674A; --route-case: #FFFFFF; --done: #CDBFAE; --me: #3D7BB0; --dest: #D9674A;
-  --warn-bg: #FBEBD3; --warn-ink: #6E4312; --bad: #B23B2E;
-  --accent-soft: #FBE9E1; --sage-soft: #E9EFE4; --shadow: 0 10px 28px rgba(94, 70, 52, .16);
-  --ground: #F4EEDF; --pitch: #D7E5C9; --pitch-edge: #BCD1AA; --track: #E9C7B3; --road: #FFFFFF; --road-edge: #E3D6C3;
-  --b-top: #FFF8EF; --b-side: #EADCC8; --b-side2: #DCCAB2; --b-line: #D2C0A6;
-  --main-top: #FDE6D6; --main-side: #F2C9B1; --main-side2: #E7B699;
+  --bg: #ECEFF3; --card: #FFFFFF; --ink: #1F2937; --muted: #6B7280; --line: #E1E5EB;
+  --route: #2F6BFF; --route-case: #FFFFFF; --done: #B8C0CC; --me: #1D4ED8; --dest: #2F6BFF;
+  --warn-bg: #FEF3C7; --warn-ink: #78350F; --bad: #DC2626;
+  --accent-soft: #E8EFFF; --soft: #F1F3F6; --shadow: 0 8px 24px rgba(31, 41, 55, .12);
+  --ground: #ECEFF3; --pitch: #E1E8E1; --pitch-edge: #CDD8CD; --track: #D7DCE4; --road: #FFFFFF; --road-edge: #D9DEE5;
+  --b-top: #FFFFFF; --b-side: #DDE2E9; --b-side2: #CBD2DC; --b-line: #C4CCD7;
+  --main-top: #E7EEFF; --main-side: #C9D6F5; --main-side2: #B5C6EE;
   /* the indoor floors read the same palette */
-  --side: var(--b-side); --side2: var(--b-side2); --bldg-edge: #CDB9A0; --main: var(--main-top); --main-edge: var(--route);
+  --side: var(--b-side); --side2: var(--b-side2); --bldg-edge: #B9C2CF; --main: var(--main-top); --main-edge: var(--route);
   --f: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -49,7 +49,7 @@ button:active { transform: scale(.97); }
 .top { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)); pointer-events: none; display: flex; flex-direction: column; gap: 8px; }
 .top > * { pointer-events: auto; }
 .instr { background: var(--card); color: var(--ink); border-radius: 24px; padding: 14px 16px; display: grid; grid-template-columns: 54px 1fr; gap: 2px 12px; align-items: center; box-shadow: var(--shadow); animation: drop .3s ease; }
-.instr .icon { grid-row: 1 / 3; width: 54px; height: 54px; border-radius: 50%; background: var(--route); display: grid; place-items: center; }
+.instr .icon { grid-row: 1 / 3; width: 54px; height: 54px; border-radius: 16px; background: var(--route); display: grid; place-items: center; }
 .instr .icon svg { width: 30px; height: 30px; }
 .instr .dist { font-size: 28px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--route); }
 .instr .say { font-size: 19px; font-weight: 700; line-height: 1.35; }
@@ -63,7 +63,7 @@ button:active { transform: scale(.97); }
 .fab { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--card); font-size: 22px; font-weight: 700; color: var(--ink); box-shadow: var(--shadow); display: grid; place-items: center; }
 .fab svg { width: 22px; height: 22px; }
 
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 28px 28px 0 0; box-shadow: 0 -10px 30px rgba(94, 70, 52, .14); padding: 20px max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(18px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 12px; max-height: 78vh; overflow-y: auto; animation: rise .32s ease; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 28px 28px 0 0; box-shadow: 0 -10px 30px rgba(31, 41, 55, .10); padding: 20px max(18px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(18px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 12px; max-height: 78vh; overflow-y: auto; animation: rise .32s ease; }
 .sheet::before { content: ""; align-self: center; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: -8px 0 2px; }
 .sheet h1 { font-size: 24px; margin: 0; line-height: 1.3; }
 .sheet h2 { font-size: 20px; margin: 0; }
@@ -84,14 +84,14 @@ button:active { transform: scale(.97); }
 .minis { display: flex; flex-wrap: wrap; gap: 6px; }
 .mini { border: 1.5px solid var(--line); background: var(--card); border-radius: 999px; padding: 8px 14px; font-size: 15px; font-weight: 700; min-height: 44px; }
 .mini[aria-pressed="true"] { border-color: var(--route); background: var(--accent-soft); color: var(--route); }
-.btn { border: 0; border-radius: 18px; min-height: 54px; padding: 14px; font-size: 18px; font-weight: 800; background: var(--route); color: #fff; width: 100%; box-shadow: 0 6px 16px rgba(217, 103, 74, .25); }
-.btn.alt { background: var(--sage-soft); color: var(--ink); box-shadow: none; }
+.btn { border: 0; border-radius: 18px; min-height: 54px; padding: 14px; font-size: 18px; font-weight: 800; background: var(--route); color: #fff; width: 100%; box-shadow: 0 6px 16px rgba(47, 107, 255, .25); }
+.btn.alt { background: var(--soft); color: var(--ink); box-shadow: none; }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .check { display: flex; gap: 10px; align-items: center; font-size: 15px; min-height: 44px; }
 .check input { width: 22px; height: 22px; accent-color: var(--route); }
 .note { font-size: 13px; color: var(--muted); line-height: 1.5; }
-.privacy { background: var(--sage-soft); border-radius: 18px; padding: 12px 14px; font-size: 15px; line-height: 1.6; color: var(--ink); }
+.privacy { background: var(--soft); border-radius: 18px; padding: 12px 14px; font-size: 15px; line-height: 1.6; color: var(--ink); }
 .steps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: var(--ink); }
 .credit { position: fixed; left: 8px; bottom: 2px; font-size: 10px; color: var(--muted); pointer-events: none; }
 
@@ -214,10 +214,10 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 
 <span class="credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
-<script src="i18n.js?v=d623386b"></script>
-<script src="campus-data.js?v=d623386b"></script>
-<script src="indoor-data.js?v=d623386b"></script>
-<script src="indoor.js?v=d623386b"></script>
-<script src="app.js?v=d623386b"></script>
+<script src="i18n.js?v=517c8f08"></script>
+<script src="campus-data.js?v=517c8f08"></script>
+<script src="indoor-data.js?v=517c8f08"></script>
+<script src="indoor.js?v=517c8f08"></script>
+<script src="app.js?v=517c8f08"></script>
 </body>
 </html>
