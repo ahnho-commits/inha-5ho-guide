@@ -129,7 +129,7 @@ const Indoor = (() => {
       const first = node(r.ids[0]), last = node(r.ids[r.ids.length - 1]);
       const s = { ids: r.ids, f: last.f };
       if (r.type === 'enter') {
-        Object.assign(s, { icon: 'start', title: t('step_enter', { entrance: first.name }), sub: t('step_enter_sub', { place: label(last.id) }), f: 1 });
+        Object.assign(s, { icon: 'start', title: t('step_enter', { entrance: first.name }), sub: t('step_enter_sub', { place: label(last.id) }), f: 1, photo: first.id === 'ENT:corner' ? 'door' : undefined });
       } else if (r.type === 'walk') {
         const rooms = r.ids.map(node).filter(n => n.kind === 'room');
         if (rooms.length < 2 && steps.length && !r.turn) continue;   // a step across the landing, not worth its own card
@@ -156,16 +156,18 @@ const Indoor = (() => {
           sub: t('step_stairs_sub', { from: floorText(first.f), to: floorText(last.f), dir: t(goingUp ? 'go_up' : 'go_down') }),
           from: first.f,
           lift,
+          photo: b1 ? { 'B1:north': 'bnorth', 'B1:south': 'bsouth' }[b1.id] : undefined,
         });
       } else if (r.type === 'x') {
         Object.assign(s, { icon: 'x', title: t('step_x'), sub: t('step_x_sub'), warn: true });
       } else if (r.type === 'b1') {
         Object.assign(s, { icon: 'straight', title: t('step_b1_walk'), sub: t('step_b1_walk_sub') });
       } else if (r.type === 'tower') {
-        Object.assign(s, { icon: 'right', title: t('step_tower_in'), sub: t('step_tower_in_sub'), warn: true });
+        Object.assign(s, { icon: 'right', title: t('step_tower_in'), sub: t('step_tower_in_sub'), warn: true, photo: 'towersign' });
       }
       steps.push(s);
     }
+    if (steps[0] && steps[0].photo === 'door' && steps[1] && !steps[1].photo) steps[1].photo = 'lobby';
     const end = node(path[path.length - 1]);
     const side = end.kind === 'room' ? besides(end.id) : [];
     steps.push({
@@ -203,6 +205,48 @@ const Indoor = (() => {
       d += `M${P(a, b, z)}L${P(c, b, z)}L${P(c, e, z)}L${P(a, e, z)}Z`;
     }
     return s + `<path fill-rule="evenodd" fill="var(--b-top)" stroke="var(--b-line)" stroke-width=".6" d="${d}"/></g>`;
+  }
+
+  // Rooms as low blocks either side of the corridor, numbered on top. The data only says which rooms are
+  // neighbours, so the side is a guess (odd numbers on the outside, even on the courtyard side) and rooms that
+  // share a spot split it. mark(id) colours the ones that matter for this step; those whose number doesn't fit
+  // on the block come back in `loose` to be tagged separately.
+  function roomBlocks(f, k, mark) {
+    const D = 7, h = 4, z = zOf(f), cells = [], loose = [];
+    const rooms = [...NODES.values()].filter(n => n.kind === 'room' && n.f === f && !n.id.includes('화장실'));
+    for (const [along, fixed, outward] of [['y', HI, 1], ['x', LO, -1], ['x', HI, 1], ['y', LO, -1]]) {
+      const across = along === 'y' ? 'x' : 'y';
+      for (const outside of [true, false]) {
+        const mine = rooms.filter(n => Math.abs(n[across] - fixed) < .5 && (n.num % 2 === 1) === outside);
+        const spots = [...new Set(mine.map(n => n[along]))].sort((a, b) => a - b);
+        spots.forEach((v, i) => {
+          const lo = i ? (spots[i - 1] + v) / 2 : v - 3, hi = i < spots.length - 1 ? (v + spots[i + 1]) / 2 : v + 3;
+          const here = mine.filter(n => n[along] === v).sort((a, b) => a.num - b.num);
+          here.forEach((n, j) => {
+            const a0 = lo + (hi - lo) * j / here.length + .3, a1 = lo + (hi - lo) * (j + 1) / here.length - .3;
+            const d0 = (outside ? outward : -outward) > 0 ? fixed + B : fixed - B - D;
+            const [x0, x1, y0, y1] = along === 'y' ? [d0, d0 + D, a0, a1] : [a0, a1, d0, d0 + D];
+            cells.push({ n, x0, x1, y0, y1, len: a1 - a0 });
+          });
+        });
+      }
+    }
+    cells.sort((a, b) => (a.x0 + a.y0) - (b.x0 + b.y0));     // far ones first
+    let s = '';
+    for (const { n, x0, x1, y0, y1, len } of cells) {
+      const m = mark(n.id), zt = z + h;
+      const top = { dest: 'var(--route)', start: 'var(--ink)', check: 'var(--accent-soft)', wrong: 'var(--soft)' }[m] || 'var(--b-top)';
+      const edge = m === 'dest' || m === 'check' ? 'var(--route)' : m ? 'var(--bldg-edge)' : 'var(--b-line)';
+      s += `<polygon fill="var(--b-side)" stroke="${edge}" stroke-width=".25" points="${P(x0, y1, zt)} ${P(x1, y1, zt)} ${P(x1, y1, z)} ${P(x0, y1, z)}"/>`;
+      s += `<polygon fill="var(--b-side2)" stroke="${edge}" stroke-width=".25" points="${P(x1, y0, zt)} ${P(x1, y1, zt)} ${P(x1, y1, z)} ${P(x1, y0, z)}"/>`;
+      s += `<polygon fill="${top}" stroke="${edge}" stroke-width="${m ? .6 : .3}" points="${P(x0, y0, zt)} ${P(x1, y0, zt)} ${P(x1, y1, zt)} ${P(x0, y1, zt)}"/>`;
+      if (m === 'dest' || m === 'start') continue;  // these already carry a big tag
+      const text = (m === 'wrong' ? '✕' : '') + doorNo(n), fits = len / k > text.length * (m ? 5.5 : 6.5);
+      if (!fits) { if (m) loose.push(n.id); continue; }
+      const [tx, ty] = iso((x0 + x1) / 2, (y0 + y1) / 2, zt);
+      s += `<text x="${tx}" y="${ty + 3.5 * k}" font-size="${(m ? 11 : 9.5) * k}" font-weight="${m ? 800 : 600}" fill="${m === 'check' ? 'var(--route)' : m ? 'var(--muted)' : 'var(--ink)'}" text-anchor="middle">${text}</text>`;
+    }
+    return { svg: s, loose };
   }
 
   // Room numbers on a floor, per wing, shown as a range ("301~360") instead of a dot per room.
@@ -245,7 +289,10 @@ const Indoor = (() => {
     const cur = plan.steps[stepIdx];
     const floors = [...new Set([1, 2, 3, 4, 5, ...plan.path.map(id => node(id).f)])].sort((a, b) => a - b);
     const top = Math.max(cur.f, cur.from ?? -1);
+    const start = plan.path[0], end = plan.path[plan.path.length - 1];
+    const mark = id => id === end ? 'dest' : id === start ? 'start' : id === cur.wrong ? 'wrong' : (cur.checks || []).includes(id) ? 'check' : '';
     const taken = [];                             // screen boxes already used by labels, so room tags don't pile up
+    let loose = [];
     let s = '';
     for (const f of floors) {
       const op = f === cur.f ? 1 : f === cur.from ? .55 : f < top ? .16 : .05;
@@ -253,7 +300,10 @@ const Indoor = (() => {
       if (f !== cur.f) continue;
       const z = zOf(f);
       if (f >= 1 && f <= 5) {
-        for (const [w, x, y] of [['N', 50, LO + B + 9], ['E', HI - B - 9, 50], ['S', 50, HI - B - 9], ['W', LO + B + 9, 50]]) {   // in the courtyard, off the corridor the room tags sit on
+        const rb = roomBlocks(f, k, mark);
+        s += rb.svg;
+        loose = rb.loose;
+        for (const [w, x, y] of [['N', 50, LO + B + 20], ['E', HI - B - 20, 50], ['S', 50, HI - B - 20], ['W', LO + B + 20, 50]]) {   // in the courtyard, clear of the rooms
           if (f === 1 && w === 'W') continue;
           const [px, py] = iso(x, y, z), r = RANGES[`${f}${w}`];
           taken.push([px - 24 * k, py - 24 * k, px + 24 * k, py + (r ? 11 : -4) * k]);
@@ -309,7 +359,6 @@ const Indoor = (() => {
       const [x, y] = at(id), w = (text.length * 12 + 16) * k, h = 22 * k;
       return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
     };
-    const start = plan.path[0], end = plan.path[plan.path.length - 1];
     const tags = [[end, label(end).replace(/^5[동서남북] /, ''), 'var(--dest)']];
     if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) tags.unshift([start, node(start).kind === 'entrance' ? '입구' : '출발', 'var(--ink)']);
     for (const [id, text, fill] of tags) {
@@ -317,9 +366,8 @@ const Indoor = (() => {
       const [x, y] = at(id), w = (text.length * 12 + 16) * k;
       if (node(id).f === cur.f) taken.push([x - w / 2, y - 29 * k, x + w / 2, y + 3 * k]);
     }
-    // Door numbers to look for: blue for "you're on track", grey for "wrong way".
-    // Rooms sit close together on the schematic, so a tag goes below, above, right or left of its door,
-    // or is left out (the card still lists every room).
+    // Rooms to look for whose number didn't fit on their block: blue for "you're on track", grey for "wrong way".
+    // A tag goes below, above, right or left of the room, or is left out (the card still lists every room).
     const hit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
     const door = (id, text, ink, edge) => {
       const [x, y] = at(id), w = (text.length * 8 + 12) * k, h = 18 * k;
@@ -331,10 +379,10 @@ const Indoor = (() => {
       }
       return '';
     };
-    const checks = (cur.checks || []).filter(id => id !== end);
+    const checks = (cur.checks || []).filter(id => loose.includes(id));
     // wrong-way warning first, then where this step ends, then the first room you pass, then the rest
     const order = [checks[checks.length - 1], checks[0]].filter(Boolean);
-    if (cur.wrong) s += door(cur.wrong, `✕ ${doorNo(node(cur.wrong))}`, 'var(--muted)', 'var(--bldg-edge)');
+    if (loose.includes(cur.wrong)) s += door(cur.wrong, `✕ ${doorNo(node(cur.wrong))}`, 'var(--muted)', 'var(--bldg-edge)');
     for (const id of [...new Set([...order, ...checks])]) s += door(id, doorNo(node(id)), 'var(--route)', 'var(--route)');
     if (cur.icon !== 'arrive') {
       const [x, y] = at(cur.ids[cur.ids.length - 1]);

@@ -166,6 +166,7 @@ function buildSteps(r) {
     steps.push({ at: t.at, dir, text, p: t.p });
   }
   steps.push({ at: r.total, dir: 'arrive', text: `${r.destName} 도착`, p: r.pts[r.pts.length - 1] });
+  if (steps[1] && dist(r.from, C.pois['start:side'].p) < 30) steps[1].photo = 'gate';
   // Flag a step when the walk leading up to it uses a path we added from the user's description.
   steps.forEach((st, i) => { if (i) st.guess = r.segKind.some((k, j) => k === 2 && r.cum[j] < st.at && r.cum[j + 1] > steps[i - 1].at); });
   return steps;
@@ -440,8 +441,35 @@ const ICONS = {
   x: '<path d="M5 19L19 5M5 5l14 14"/>',
 };
 const iconSvg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.straight}</svg>`;
+// Real photos for the steps where one helps. Small in the card, full screen on tap.
+const PHOTOS = {
+  gate: '쪽문을 지나 60주년기념관과 5호관 사이 길로 들어서는 모습',
+  door: '5동과 5북 사이 모서리의 유리 자동문 입구',
+  lobby: '모서리 입구로 들어오면 보이는 1층 엘리베이터와 안내판',
+  bnorth: '5동·5북 사이 계단으로 내려온 5동 지하 복도',
+  bsouth: '5동·5남 사이 계단으로 내려온 5동 지하 동아리방 복도',
+  towersign: '5동탑 층별 동아리 안내판',
+};
+function setPhoto(key) {
+  const b = $('i-photo');
+  b.hidden = !key;
+  $('instr').classList.toggle('photo', !!key);
+  if (!key) return;
+  b.firstElementChild.src = `../img/${key}.jpg`;
+  b.firstElementChild.alt = PHOTOS[key];
+  b.dataset.photo = key;
+}
+$('i-photo').onclick = () => {
+  const v = $('viewer'), key = $('i-photo').dataset.photo;
+  v.firstElementChild.src = `../img/${key}.jpg`;
+  v.firstElementChild.alt = PHOTOS[key];
+  v.lastElementChild.textContent = `실제 사진 · ${PHOTOS[key]}`;
+  v.hidden = false;
+};
+$('viewer').onclick = () => { $('viewer').hidden = true; };
 function showInstr(step, distM) {
   $('instr').hidden = false;
+  setPhoto(step.photo);
   $('i-icon').innerHTML = iconSvg(step.dir);
   $('i-dist').textContent = step.dir === 'arrive' && distM < ARRIVE_M ? '도착' : `${Math.max(0, Math.round(distM / 5) * 5)}m`;
   $('i-say').textContent = step.text + (step.guess ? ' (경로 확인 중)' : '');
@@ -800,6 +828,7 @@ function showIndoor() {
   $('i-icon').innerHTML = iconSvg(st.icon);
   $('i-dist').textContent = st.from !== undefined ? `${Indoor.floorName(st.from)} → ${Indoor.floorName(st.f)}` : Indoor.floorName(st.f);
   $('i-say').textContent = st.title;
+  setPhoto(st.photo);
   $('i-to').textContent = st.sub;
   $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
   $('in-prev').disabled = inStep === 0;
