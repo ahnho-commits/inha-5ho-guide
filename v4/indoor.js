@@ -281,7 +281,22 @@ const Indoor = (() => {
       }
       return runs;
     };
-    const line = ids => 'M' + ids.map(id => at(id).map(v => v.toFixed(1)).join(' ')).join('L');
+    // The ring floors are four corridors meeting at right angles, so a hop from one wing to the next turns at the corner.
+    const onRing = n => n.f >= 1 && n.f <= 5 && !n.id.startsWith('T:');
+    const vert = n => Math.abs(n.x - LO) < .5 || Math.abs(n.x - HI) < .5;
+    const horiz = n => Math.abs(n.y - LO) < .5 || Math.abs(n.y - HI) < .5;
+    const line = ids => {
+      const pts = [];
+      ids.map(node).forEach((b, i, ns) => {
+        const a = ns[i - 1];
+        if (a && onRing(a) && onRing(b) && !(vert(a) && vert(b) && a.x === b.x) && !(horiz(a) && horiz(b) && a.y === b.y)) {
+          if (vert(a) && horiz(b)) pts.push(iso(a.x, b.y, zOf(b.f)));
+          else if (horiz(a) && vert(b)) pts.push(iso(b.x, a.y, zOf(b.f)));
+        }
+        pts.push(iso(b.x, b.y, zOf(b.f)));
+      });
+      return 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L');
+    };
     for (const run of sameFloor(plan.path)) {
       if (node(run[0]).f !== cur.f) continue;
       s += `<path d="${line(run)}" fill="none" stroke="var(--route)" stroke-opacity=".25" stroke-width="${4 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
