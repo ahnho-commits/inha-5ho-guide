@@ -211,7 +211,7 @@ const Indoor = (() => {
   // neighbours, so the side is a guess (odd numbers on the outside, even on the courtyard side) and rooms that
   // share a spot split it. mark(id) colours the ones that matter for this step; those whose number doesn't fit
   // on the block come back in `loose` to be tagged separately.
-  function roomBlocks(f, k, mark) {
+  function roomBlocks(f, k, mark, inTheWay) {
     const D = 7, h = 4, z = zOf(f), cells = [], loose = [];
     const rooms = [...NODES.values()].filter(n => n.kind === 'room' && n.f === f && !n.id.includes('화장실'));
     for (const [along, fixed, outward] of [['y', HI, 1], ['x', LO, -1], ['x', HI, 1], ['y', LO, -1]]) {
@@ -235,6 +235,13 @@ const Indoor = (() => {
     let s = '';
     for (const { n, x0, x1, y0, y1, len } of cells) {
       const m = mark(n.id), zt = z + h;
+      // outline on screen: top face plus the two visible sides
+      const outline = [iso(x0, y0, zt), iso(x1, y0, zt), iso(x1, y0, z), iso(x1, y1, z), iso(x0, y1, z), iso(x0, y1, zt)];
+      if (m !== 'dest' && inTheWay(outline, (x0 + x1) / 2 + (y0 + y1) / 2)) {
+        s += `<polygon fill="var(--b-top)" fill-opacity=".35" stroke="var(--b-line)" stroke-opacity=".5" stroke-width=".25" points="${outline.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}"/>`;
+        if (m && m !== 'start') loose.push(n.id);
+        continue;
+      }
       const top = { dest: 'var(--route)', start: 'var(--ink)', check: 'var(--accent-soft)', wrong: 'var(--soft)' }[m] || 'var(--b-top)';
       const edge = m === 'dest' || m === 'check' ? 'var(--route)' : m ? 'var(--bldg-edge)' : 'var(--b-line)';
       s += `<polygon fill="var(--b-side)" stroke="${edge}" stroke-width=".25" points="${P(x0, y1, zt)} ${P(x1, y1, zt)} ${P(x1, y1, z)} ${P(x0, y1, z)}"/>`;
@@ -294,13 +301,72 @@ const Indoor = (() => {
     const taken = [];                             // screen boxes already used by labels, so room tags don't pile up
     let loose = [];
     let s = '';
+    const sameFloor = ids => {
+      const runs = [];
+      for (let i = 1; i < ids.length; i++) {
+        const a = node(ids[i - 1]), b = node(ids[i]);
+        if (a.f !== b.f) continue;
+        const last = runs[runs.length - 1];
+        if (last && last[last.length - 1] === ids[i - 1]) last.push(ids[i]); else runs.push([ids[i - 1], ids[i]]);
+      }
+      return runs;
+    };
+    // The ring floors are four corridors meeting at right angles, so a hop from one wing to the next turns at the corner.
+    const onRing = n => n.f >= 1 && n.f <= 5 && !n.id.startsWith('T:');
+    const vert = n => Math.abs(n.x - LO) < .5 || Math.abs(n.x - HI) < .5;
+    const horiz = n => Math.abs(n.y - LO) < .5 || Math.abs(n.y - HI) < .5;
+    const corridor = ids => {                    // world points [x, y, z] along a same-floor run
+      const pts = [];
+      ids.map(node).forEach((b, i, ns) => {
+        const a = ns[i - 1];
+        if (a && onRing(a) && onRing(b) && !(vert(a) && vert(b) && a.x === b.x) && !(horiz(a) && horiz(b) && a.y === b.y)) {
+          if (vert(a) && horiz(b)) pts.push([a.x, b.y, zOf(b.f)]);
+          else if (horiz(a) && vert(b)) pts.push([b.x, a.y, zOf(b.f)]);
+        }
+        pts.push([b.x, b.y, zOf(b.f)]);
+      });
+      return pts;
+    };
+    const line = ids => 'M' + corridor(ids).map(p => iso(...p).map(v => v.toFixed(1)).join(' ')).join('L');
+
+    // What has to stay visible on this floor: the route (sampled every unit), the start and end, and the
+    // stairs or lift of this step. A room block standing in front of any of it goes see-through.
+    const keep = [];
+    for (const run of sameFloor(plan.path)) {
+      if (node(run[0]).f !== cur.f) continue;
+      const pts = corridor(run);
+      pts.forEach((b, i) => {
+        const a = pts[i - 1] || b, n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
+        for (let j = 1; j <= n; j++) keep.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n, b[2]]);
+      });
+    }
+    for (const id of [start, end]) if (node(id).f === cur.f) keep.push([node(id).x, node(id).y, zOf(cur.f)]);
+    const shaftBoxes = [];
+    if (cur.from !== undefined) {
+      const a = cur.ids.map(node).find(n => n.kind === 'stair' && n.f === cur.from) || node(cur.ids[0]);
+      const [rx, ry] = cur.lift ? [4, 4] : [9, 5.5];
+      const corners = [];
+      for (const dx of [-rx, rx]) for (const dy of [-ry, ry]) for (const f of [cur.from, cur.f]) corners.push(iso(a.x + dx, a.y + dy, zOf(f)));
+      shaftBoxes.push([Math.min(...corners.map(c => c[0])), Math.min(...corners.map(c => c[1])), Math.max(...corners.map(c => c[0])), Math.max(...corners.map(c => c[1]))]);
+    }
+    const inside = (p, poly) => poly.every((a, i) => {
+      const b = poly[(i + 1) % poly.length];
+      return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) >= 0;
+    });
+    const inTheWay = (outline, depth) => {
+      const xs = outline.map(p => p[0]), ys = outline.map(p => p[1]);
+      const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+      if (shaftBoxes.some(b => box[0] < b[2] && b[0] < box[2] && box[1] < b[3] && b[1] < box[3])) return true;
+      return keep.some(w => w[0] + w[1] < depth && inside(iso(...w), outline));
+    };
+
     for (const f of floors) {
       const op = f === cur.f ? 1 : f === cur.from ? .55 : f < top ? .16 : .05;
       s += slab(shapeOf(f), zOf(f), op, f === cur.f ? 4 : 2.5);
       if (f !== cur.f) continue;
       const z = zOf(f);
       if (f >= 1 && f <= 5) {
-        const rb = roomBlocks(f, k, mark);
+        const rb = roomBlocks(f, k, mark, inTheWay);
         s += rb.svg;
         loose = rb.loose;
         for (const [w, x, y] of [['N', 50, LO + B + 20], ['E', HI - B - 20, 50], ['S', 50, HI - B - 20], ['W', LO + B + 20, 50]]) {   // in the courtyard, clear of the rooms
@@ -321,32 +387,6 @@ const Indoor = (() => {
       s += st.lift ? liftShaft(anchor.x, anchor.y, st.from, st.f, i === stepIdx, k) : staircase(anchor.x, anchor.y, st.from, st.f, i === stepIdx);
     });
     // Route on the floor you're looking at: this step bold, the rest of this floor faint. Floor changes are the stairs above.
-    const sameFloor = ids => {
-      const runs = [];
-      for (let i = 1; i < ids.length; i++) {
-        const a = node(ids[i - 1]), b = node(ids[i]);
-        if (a.f !== b.f) continue;
-        const last = runs[runs.length - 1];
-        if (last && last[last.length - 1] === ids[i - 1]) last.push(ids[i]); else runs.push([ids[i - 1], ids[i]]);
-      }
-      return runs;
-    };
-    // The ring floors are four corridors meeting at right angles, so a hop from one wing to the next turns at the corner.
-    const onRing = n => n.f >= 1 && n.f <= 5 && !n.id.startsWith('T:');
-    const vert = n => Math.abs(n.x - LO) < .5 || Math.abs(n.x - HI) < .5;
-    const horiz = n => Math.abs(n.y - LO) < .5 || Math.abs(n.y - HI) < .5;
-    const line = ids => {
-      const pts = [];
-      ids.map(node).forEach((b, i, ns) => {
-        const a = ns[i - 1];
-        if (a && onRing(a) && onRing(b) && !(vert(a) && vert(b) && a.x === b.x) && !(horiz(a) && horiz(b) && a.y === b.y)) {
-          if (vert(a) && horiz(b)) pts.push(iso(a.x, b.y, zOf(b.f)));
-          else if (horiz(a) && vert(b)) pts.push(iso(b.x, a.y, zOf(b.f)));
-        }
-        pts.push(iso(b.x, b.y, zOf(b.f)));
-      });
-      return 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L');
-    };
     for (const run of sameFloor(plan.path)) {
       if (node(run[0]).f !== cur.f) continue;
       s += `<path d="${line(run)}" fill="none" stroke="var(--route)" stroke-opacity=".25" stroke-width="${4 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
