@@ -92,6 +92,23 @@ const Indoor = (() => {
     return w.length ? w[w.length - 1] : null;
   };
 
+  // Door numbers you can check along the way: a few rooms you'll pass, one you'd see going the wrong way,
+  // and the rooms either side of where you arrive.
+  const doorNo = n => n.id.slice(2);
+  const isDoor = n => n && n.kind === 'room' && !n.id.includes('화장실');
+  function checkpoints(rooms) {
+    const doors = rooms.filter(isDoor);
+    if (doors.length <= 4) return doors;
+    return [...new Set([0, Math.round(doors.length / 3), Math.round(2 * doors.length / 3), doors.length - 1])].map(i => doors[i]);
+  }
+  function wrongWay(ids, up) {
+    const onPath = new Set(ids), first = node(ids[0]);
+    const near = ADJ.get(first.id).map(([v]) => node(v)).filter(n => isDoor(n) && n.f === first.f && !onPath.has(n.id));
+    const start = ids.map(node).find(isDoor);
+    return near.find(n => start && (up ? n.num < start.num : n.num > start.num)) || null;
+  }
+  const besides = id => ADJ.get(id).map(([v]) => node(v)).filter(n => isDoor(n) && n.f === node(id).f).slice(0, 2);
+
   function buildSteps(path) {
     // Cut the path into runs of the same kind of movement.
     const runs = [];
@@ -118,9 +135,14 @@ const Indoor = (() => {
         if (rooms.length < 2 && steps.length && !r.turn) continue;   // a step across the landing, not worth its own card
         const up = rooms.length > 1 && rooms[rooms.length - 1].num > rooms[0].num;
         const wing = t('wing_' + (r.wing || wingOf(r.ids) || 'S'));
+        const checks = checkpoints(rooms.filter(n => n.id !== r.ids[0])), wrong = r.turn ? null : wrongWay(r.ids, up);   // not the door you're standing at
+        const passed = rooms.filter(n => n.id !== r.ids[0] && n.id !== last.id).length;
+        const walkSub = passed ? t('step_walk_sub', { dir: t(up ? 'dir_up' : 'dir_down'), count: passed, to: label(last.id) }) : t('step_walk_near', { to: label(last.id) });
+        const extra = [checks.length > 1 ? t('step_checks', { list: checks.map(doorNo).join(' → ') }) : '', wrong ? t('step_wrong', { room: doorNo(wrong) }) : ''].filter(Boolean).join(' · ');
         Object.assign(s, r.turn
-          ? { icon: 'right', title: t('step_turn', { wing, wing_ro: ro(wing) }), sub: t('step_turn_sub', { to: label(last.id) }) }
-          : { icon: 'straight', title: t('step_walk', { wing }), sub: t('step_walk_sub', { dir: t(up ? 'dir_up' : 'dir_down'), count: Math.max(0, rooms.length - 1), to: label(last.id) }) });
+          ? { icon: 'right', title: t('step_turn', { wing, wing_ro: ro(wing) }), sub: [t('step_turn_sub', { to: label(last.id) }), extra].filter(Boolean).join(' · ') }
+          : { icon: 'straight', title: t('step_walk', { wing }), sub: [walkSub, extra].filter(Boolean).join(' · ') },
+          { checks: checks.map(n => n.id), wrong: wrong && wrong.id });
       } else if (r.type === 'vertical') {
         const goingUp = last.f > first.f;
         // The basement stairs hang off the lift landing, but the lift itself doesn't go down there.
@@ -145,7 +167,12 @@ const Indoor = (() => {
       steps.push(s);
     }
     const end = node(path[path.length - 1]);
-    steps.push({ ids: [end.id], f: end.f, icon: 'arrive', title: t('step_arrive', { to: label(end.id) }), sub: end.kind === 'room' ? t('step_arrive_sub', { to: label(end.id) }) : t('step_arrive_place') });
+    const side = end.kind === 'room' ? besides(end.id) : [];
+    steps.push({
+      ids: [end.id], f: end.f, icon: 'arrive', title: t('step_arrive', { to: label(end.id) }),
+      sub: end.kind === 'room' ? [t('step_arrive_sub', { to: label(end.id) }), side.length ? t('step_neighbors', { list: side.map(doorNo).join(' · ') }) : ''].filter(Boolean).join(' · ') : t('step_arrive_place'),
+      checks: side.map(n => n.id),
+    });
     return steps;
   }
 
@@ -218,6 +245,7 @@ const Indoor = (() => {
     const cur = plan.steps[stepIdx];
     const floors = [...new Set([1, 2, 3, 4, 5, ...plan.path.map(id => node(id).f)])].sort((a, b) => a - b);
     const top = Math.max(cur.f, cur.from ?? -1);
+    const taken = [];                             // screen boxes already used by labels, so room tags don't pile up
     let s = '';
     for (const f of floors) {
       const op = f === cur.f ? 1 : f === cur.from ? .55 : f < top ? .16 : .05;
@@ -225,9 +253,10 @@ const Indoor = (() => {
       if (f !== cur.f) continue;
       const z = zOf(f);
       if (f >= 1 && f <= 5) {
-        for (const [w, x, y] of [['N', 50, LO], ['E', HI, 50], ['S', 50, HI], ['W', LO, 50]]) {
+        for (const [w, x, y] of [['N', 50, LO + B + 9], ['E', HI - B - 9, 50], ['S', 50, HI - B - 9], ['W', LO + B + 9, 50]]) {   // in the courtyard, off the corridor the room tags sit on
           if (f === 1 && w === 'W') continue;
           const [px, py] = iso(x, y, z), r = RANGES[`${f}${w}`];
+          taken.push([px - 24 * k, py - 24 * k, px + 24 * k, py + (r ? 11 : -4) * k]);
           s += `<text class="lbl" x="${px}" y="${py - 9 * k}" font-size="${15 * k}" font-weight="800" fill="var(--ink)" stroke-width="${3.5 * k}" text-anchor="middle">${t('wing_' + w)}</text>`;
           if (r) s += `<text class="lbl" x="${px}" y="${py + 7 * k}" font-size="${11 * k}" font-weight="600" fill="var(--muted)" stroke-width="${3 * k}" text-anchor="middle">${r[0]}~${r[1]}호</text>`;
         }
@@ -266,8 +295,32 @@ const Indoor = (() => {
       return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
     };
     const start = plan.path[0], end = plan.path[plan.path.length - 1];
-    if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) s += tag(start, node(start).kind === 'entrance' ? '입구' : '출발', 'var(--ink)');
-    s += tag(end, label(end).replace(/^5[동서남북] /, ''), 'var(--dest)');
+    const tags = [[end, label(end).replace(/^5[동서남북] /, ''), 'var(--dest)']];
+    if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) tags.unshift([start, node(start).kind === 'entrance' ? '입구' : '출발', 'var(--ink)']);
+    for (const [id, text, fill] of tags) {
+      s += tag(id, text, fill);
+      const [x, y] = at(id), w = (text.length * 12 + 16) * k;
+      if (node(id).f === cur.f) taken.push([x - w / 2, y - 29 * k, x + w / 2, y + 3 * k]);
+    }
+    // Door numbers to look for: blue for "you're on track", grey for "wrong way".
+    // Rooms sit close together on the schematic, so a tag goes below, above, right or left of its door,
+    // or is left out (the card still lists every room).
+    const hit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+    const door = (id, text, ink, edge) => {
+      const [x, y] = at(id), w = (text.length * 8 + 12) * k, h = 18 * k;
+      for (const [dx, dy] of [[-w / 2, 6 * k], [-w / 2, -h - 6 * k], [8 * k, -h / 2], [-w - 8 * k, -h / 2]]) {
+        const box = [x + dx - 2 * k, y + dy - 2 * k, x + dx + w + 2 * k, y + dy + h + 2 * k];
+        if (taken.some(t => hit(t, box))) continue;
+        taken.push(box);
+        return `<g transform="translate(${x} ${y})"><rect x="${dx}" y="${dy}" width="${w}" height="${h}" rx="${5 * k}" fill="#fff" stroke="${edge}" stroke-width="${1.5 * k}"/><text x="${dx + w / 2}" y="${dy + h / 2 + 4 * k}" font-size="${11 * k}" font-weight="800" fill="${ink}" text-anchor="middle">${text}</text><circle r="${2.6 * k}" fill="${edge}"/></g>`;
+      }
+      return '';
+    };
+    const checks = (cur.checks || []).filter(id => id !== end);
+    // wrong-way warning first, then where this step ends, then the first room you pass, then the rest
+    const order = [checks[checks.length - 1], checks[0]].filter(Boolean);
+    if (cur.wrong) s += door(cur.wrong, `✕ ${doorNo(node(cur.wrong))}`, 'var(--muted)', 'var(--bldg-edge)');
+    for (const id of [...new Set([...order, ...checks])]) s += door(id, doorNo(node(id)), 'var(--route)', 'var(--route)');
     if (cur.icon !== 'arrive') {
       const [x, y] = at(cur.ids[cur.ids.length - 1]);
       s += `<circle cx="${x}" cy="${y}" r="${8 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
@@ -284,11 +337,9 @@ const Indoor = (() => {
       for (const f of [cur.from, cur.f]) for (const [dx, dy] of [[-22, -22], [22, -22], [22, 22], [-22, 22]]) pts.push(iso(a.x + dx, a.y + dy, zOf(f)));
       return pts;
     }
-    for (const f of [cur.f, cur.from].filter(v => v !== undefined)) {
-      const sh = shapeOf(f), z = zOf(f);
-      for (const [x, y] of [[sh.x0, sh.y0], [sh.x1, sh.y0], [sh.x1, sh.y1], [sh.x0, sh.y1]]) pts.push(iso(x, y, z));
-    }
-    cur.ids.forEach(id => pts.push(at(id)));
+    // walking: close in on this stretch of corridor so the room tags along it have room to breathe
+    const z = zOf(cur.f);
+    for (const n of cur.ids.map(node)) for (const [dx, dy] of [[-16, -16], [16, -16], [16, 16], [-16, 16]]) pts.push(iso(n.x + dx, n.y + dy, z));
     return pts;
   }
 
