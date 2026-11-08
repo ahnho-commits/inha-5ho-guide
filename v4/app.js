@@ -171,98 +171,189 @@ function buildSteps(r) {
   return steps;
 }
 
-// ---------- map view ----------
+// ---------- 3D map view ----------
+// Fixed-angle isometric view. The map is turned 29° so 5호관 sits square on screen, the same way
+// the indoor floors are drawn (5남 bottom-left, 5동 bottom-right). Screen units are about a metre.
+const ROT = -29 * Math.PI / 180, RC = Math.cos(ROT), RS = Math.sin(ROT);
+const turn = p => [p[0] * RC - p[1] * RS, p[0] * RS + p[1] * RC];
+function S(p, z = 0) {
+  const [x, y] = turn(p);
+  return [(x - y) * 0.866, (x + y) * 0.5 - z];
+}
+const pts = (arr, z = 0) => arr.map(p => S(p, z).map(v => v.toFixed(1)).join(',')).join(' ');
+const pathOf = (arr, z = 0) => 'M' + arr.map(p => S(p, z).map(v => v.toFixed(1)).join(' ')).join('L');
+
 const view = { x: 0, y: 0, w: 600 };
-let follow = false;
+let follow = false, viewAnim = 0;
 const aspect = () => svg.clientHeight / svg.clientWidth;
 const mPerPx = () => view.w / svg.clientWidth;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function setView(x, y, w) {
-  view.w = Math.max(60, Math.min(1400, w));
-  view.x = x - view.w / 2;
-  view.y = y - view.w * aspect() / 2;
-  draw();
+// Glide the camera to a new view; panning by hand cancels the glide.
+function goView(target, animate = true) {
+  cancelAnimationFrame(viewAnim);
+  if (!animate || reduceMotion) { Object.assign(view, target); return draw(); }
+  const from = { ...view }, t0 = performance.now(), D = 450;
+  const tick = now => {
+    const t = Math.min(1, (now - t0) / D), e = t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    for (const k of ['x', 'y', 'w']) view[k] = from[k] + (target[k] - from[k]) * e;
+    draw();
+    if (t < 1) viewAnim = requestAnimationFrame(tick);
+  };
+  viewAnim = requestAnimationFrame(tick);
 }
-// Fit points so they stay clear of the top card and the bottom sheet.
-function fit(points, padPx = 40, minSpan = 60) {
+// Fit screen-space points so they stay clear of the top card and the bottom sheet.
+function fitScreen(points, padPx = 40, minSpan = 60) {
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
   const top = $('instr').hidden ? 70 : 190, bottom = visibleSheetHeight() + 20;
   const Wpx = svg.clientWidth, Hpx = svg.clientHeight;
   const spanX = Math.max(...xs) - Math.min(...xs) || 60, spanY = Math.max(...ys) - Math.min(...ys) || 60;
   const usableW = Wpx - padPx * 2, usableH = Math.max(120, Hpx - top - bottom - padPx);
   const m = Math.max(spanX / usableW, spanY / usableH, minSpan / Wpx);
-  view.w = Math.min(1400, m * Wpx);
+  const w = Math.min(1600, m * Wpx);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  view.x = cx - view.w / 2;
-  view.y = cy - (top + (Hpx - top - bottom) / 2) * m;
-  draw();
+  goView({ w, x: cx - w / 2, y: cy - (top + (Hpx - top - bottom) / 2) * (w / Wpx) });
 }
+const fit = (points, padPx, minSpan) => fitScreen(points.map(p => S(p)), padPx, minSpan);
 function visibleSheetHeight() {
   const s = [...document.querySelectorAll('.sheet')].find(el => !el.hidden);
   return s ? s.offsetHeight : 0;
 }
 
-const ring = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z';
-const line = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L');
+// --- the static 3D campus, built once ---
 const ROAD_W = { secondary: 14, secondary_link: 9, trunk: 18, tertiary: 10, residential: 7, unclassified: 7, service: 5.5, pedestrian: 5, footway: 3, path: 2.5, steps: 3 };
-
-function buildStatic() {
-  const [x0, y0, x1, y1] = C.area;
-  let s = `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="var(--ground)"/>`;
-  s += C.pitches.map(p => `<path d="${ring(p.p)}" fill="var(--pitch)"/>`).join('');
-  s += `<path d="${ring(C.track)}" fill="none" stroke="var(--track)" stroke-width="4"/>`;
-  const roads = [...C.roads].sort((a, b) => (ROAD_W[a.t] || 4) - (ROAD_W[b.t] || 4));
-  s += roads.map(r => `<path d="${line(r.p)}" fill="none" stroke="var(--road-edge)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${(ROAD_W[r.t] || 4) + 1.6}"/>`).join('');
-  s += roads.map(r => `<path d="${line(r.p)}" fill="none" stroke="var(--road)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${ROAD_W[r.t] || 4}"/>`).join('');
-  s += C.buildings.map(b => b.main
-    ? `<path d="${ring(b.p)} ${ring(b.hole)}" fill-rule="evenodd" fill="var(--main)" stroke="var(--main-edge)" stroke-width="1.5"/>`
-    : `<path d="${ring(b.p)}" fill="var(--bldg)" stroke="var(--bldg-edge)" stroke-width=".6"/>`).join('');
-  return `<g>${s}</g>`;
+const MAX_H = 34;   // tall towers are capped so they don't bury the campus
+function inRing(p, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
-const STATIC = buildStatic();
+const solid = (b, p) => inRing(p, b.p) && !(b.hole && inRing(p, b.hole));
+
+function buildingSvg(b) {
+  const h = Math.min(MAX_H, (b.lv || 3) * 3.4);
+  const [top, side, side2] = b.main ? ['var(--main-top)', 'var(--main-side)', 'var(--main-side2)'] : ['var(--b-top)', 'var(--b-side)', 'var(--b-side2)'];
+  const walls = [];
+  for (const ring of b.hole ? [b.p, b.hole] : [b.p]) {
+    for (let i = 1; i < ring.length; i++) {
+      const a = ring[i - 1], c = ring[i], L = dist(a, c);
+      if (L < 0.3) continue;
+      // which side of this wall is open air? that is the side we might see
+      let nx = (c[1] - a[1]) / L, ny = -(c[0] - a[0]) / L;
+      const mid = [(a[0] + c[0]) / 2 + nx * .6, (a[1] + c[1]) / 2 + ny * .6];
+      if (solid(b, mid)) { nx = -nx; ny = -ny; }
+      const [tx, ty] = turn([nx, ny]);
+      if (tx + ty <= 0) continue;             // faces away from the camera
+      walls.push({ d: (S(a)[1] + S(c)[1]) / 2, s: `<polygon fill="${ty > tx ? side : side2}" points="${pts([a, c], h)} ${pts([c, a], 0)}"/>` });
+    }
+  }
+  walls.sort((p, q) => p.d - q.d);
+  const roof = `<path fill-rule="evenodd" fill="${top}" stroke="var(--b-line)" stroke-width=".5" d="${pathOf(b.p, h)}Z${b.hole ? pathOf(b.hole, h) + 'Z' : ''}"/>`;
+  return walls.map(w => w.s).join('') + roof;
+}
+
+function makeTrees() {
+  let seed = 11;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const segs = C.roads.flatMap(r => r.p.slice(1).map((q, i) => [r.p[i], q]));
+  const nearRoad = p => segs.some(([a, b]) => nearestOnSegment(p, a, b).d < 4.5);
+  const out = [];
+  for (const r of C.roads) {
+    if (!['service', 'footway', 'pedestrian', 'residential', 'tertiary'].includes(r.t)) continue;
+    for (let i = 1; i < r.p.length; i++) {
+      const a = r.p[i - 1], b = r.p[i], L = dist(a, b), n = Math.floor(L / 24);
+      for (let j = 0; j < n; j++) {
+        const t = (j + .5) / n, off = (j % 2 ? 1 : -1) * (7 + rnd() * 3);
+        const p = [a[0] + (b[0] - a[0]) * t - (b[1] - a[1]) / L * off, a[1] + (b[1] - a[1]) * t + (b[0] - a[0]) / L * off];
+        if (inArea(p, 0) && !C.buildings.some(bd => solid(bd, p)) && !C.pitches.some(pt => inRing(p, pt.p)) && !nearRoad(p)) out.push(p);
+      }
+    }
+  }
+  return out;
+}
+function treeSvg(p) {
+  const [x, y] = S(p), r = 3.4;
+  return `<rect x="${(x - .6).toFixed(1)}" y="${(y - 4).toFixed(1)}" width="1.2" height="4" rx=".5" fill="var(--trunk)"/><circle cx="${x.toFixed(1)}" cy="${(y - 6).toFixed(1)}" r="${r}" fill="var(--tree)"/><circle cx="${(x + 1.2).toFixed(1)}" cy="${(y - 7).toFixed(1)}" r="${r * .5}" fill="var(--tree2)"/>`;
+}
+
+const BASE3D = (() => {
+  const [x0, y0, x1, y1] = C.area;
+  let s = `<polygon fill="var(--ground)" points="${pts([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])}"/>`;
+  s += C.pitches.map(p => `<polygon fill="var(--pitch)" stroke="var(--pitch-edge)" stroke-width=".6" points="${pts(p.p)}"/>`).join('');
+  s += `<path fill="none" stroke="var(--track)" stroke-width="3" stroke-linejoin="round" d="${pathOf(C.track)}Z"/>`;
+  const roads = [...C.roads].sort((a, b) => (ROAD_W[a.t] || 4) - (ROAD_W[b.t] || 4));
+  s += roads.map(r => `<path d="${pathOf(r.p)}" fill="none" stroke="var(--road-edge)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${((ROAD_W[r.t] || 4) + 1.6) * .8}"/>`).join('');
+  s += roads.map(r => `<path d="${pathOf(r.p)}" fill="none" stroke="var(--road)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${(ROAD_W[r.t] || 4) * .8}"/>`).join('');
+  // Back to front: anything lower on screen is nearer the camera and drawn later.
+  const items = [
+    ...C.buildings.map(b => ({ d: Math.max(...b.p.map(p => S(p)[1])), s: buildingSvg(b) })),
+    ...makeTrees().map(p => ({ d: S(p)[1], s: treeSvg(p) })),
+  ].sort((a, b) => a.d - b.d);
+  return s + items.map(i => i.s).join('');
+})();
 
 let route = null, me = null, heading = null, focusStep = null;
 let progress = 0;
+let baseShown = null;
 
-function pill(p, text, fill, k) {
-  const fs = 13 * k, w = (text.length * 13 + 18) * k, h = 24 * k;
-  return `<g transform="translate(${p[0]} ${p[1]})"><rect x="${-w / 2}" y="${-h - 8 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-8 * k - h / 2 + fs * .36}" font-size="${fs}" font-weight="700" fill="#fff" stroke="none" text-anchor="middle">${text}</text><circle r="${4 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
+function pill(p, z, text, fill, k) {
+  const [x, y] = S(p, z), fs = 13 * k, w = (text.length * 13 + 20) * k, h = 26 * k;
+  return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 9 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-9 * k - h / 2 + fs * .36}" font-size="${fs}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.8 * k}"/></g>`;
 }
+const LIFT = .4;   // draw the route a hair above the ground
 
 function draw() {
-  if (phase === 'indoor') return drawIndoor();
-  const k = mPerPx();
-  const h = view.w * aspect();
+  const k = mPerPx(), h = view.w * aspect();
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
-  let s = STATIC;
-  for (const l of LANDMARKS.filter(l => !l.name.includes('출구') && !['정문', '후문', '쪽문'].includes(l.name))) {
-    const big = l.name === '5호관';
-    s += `<text class="lbl" x="${l.p[0]}" y="${l.p[1]}" font-size="${(big ? 16 : 13) * k}" font-weight="${big ? 800 : 600}" fill="${big ? 'var(--dest)' : 'var(--muted)'}" stroke-width="${3 * k}" text-anchor="middle">${l.name}</text>`;
+  if (phase === 'indoor') {
+    if (baseShown !== 'indoor') { $('base').innerHTML = ''; baseShown = 'indoor'; }
+    $('over').innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep);
+    return;
   }
+  if (baseShown !== 'outdoor') { $('base').innerHTML = BASE3D; baseShown = 'outdoor'; }
+  let s = '';
   if (route) {
-    const doneTo = Math.min(progress, route.total);
-    const donePts = [], restPts = [];
-    route.pts.forEach((p, i) => { if (route.cum[i] <= doneTo) donePts.push(p); else restPts.push(p); });
+    const doneTo = Math.min(progress, route.total), done = [], rest = [];
+    route.pts.forEach((p, i) => (route.cum[i] <= doneTo ? done : rest).push(p));
     const cut = pointAt(route, doneTo);
-    donePts.push(cut);
-    restPts.unshift(cut);
+    done.push(cut);
+    rest.unshift(cut);
     const sw = 7 * k;
-    if (donePts.length > 1) s += `<path d="${line(donePts)}" fill="none" stroke="var(--done)" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    s += `<path d="${line(restPts)}" fill="none" stroke="var(--route-case)" stroke-width="${sw + 4 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    s += `<path d="${line(restPts)}" fill="none" stroke="var(--route)" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
-    if (focusStep && focusStep.p) s += `<circle cx="${focusStep.p[0]}" cy="${focusStep.p[1]}" r="${11 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
+    if (done.length > 1) s += `<path d="${pathOf(done, LIFT)}" fill="none" stroke="var(--done)" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${pathOf(rest, LIFT)}" fill="none" stroke="var(--route-case)" stroke-width="${sw + 5 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${pathOf(rest, LIFT)}" fill="none" stroke="var(--route)" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="${pathOf(rest, LIFT)}" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="${2.2 * k}" stroke-linecap="round" stroke-dasharray="${1 * k} ${13 * k}"><animate attributeName="stroke-dashoffset" from="0" to="${-14 * k}" dur="1.1s" repeatCount="indefinite"/></path>`;
+    if (focusStep && focusStep.p) {
+      const [fx, fy] = S(focusStep.p);
+      s += `<ellipse cx="${fx}" cy="${fy}" rx="${15 * k}" ry="${9 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
+    }
+  }
+  for (const l of LANDMARKS.filter(l => C.buildings.some(b => b.name === l.name && (b.main || l.name !== '5호관')))) {
+    const b = C.buildings.find(b => b.name === l.name && (b.main || l.name !== '5호관'));
+    const [x, y] = S(l.p, Math.min(MAX_H, (b.lv || 3) * 3.4));
+    const big = b.main;
+    s += `<text class="lbl" x="${x}" y="${y}" font-size="${(big ? 16 : 12) * k}" font-weight="${big ? 800 : 600}" fill="${big ? 'var(--dest)' : 'var(--muted)'}" stroke-width="${3.5 * k}" text-anchor="middle">${l.name}</text>`;
   }
   for (const [key, v] of Object.entries(C.pois)) {
-    if (key.startsWith('start:')) s += pill(v.p, key === 'start:station' ? '인하대역' : v.name, 'var(--ink)', k);
+    if (key.startsWith('start:')) s += pill(v.p, 0, key === 'start:station' ? '인하대역' : v.name, 'var(--ink)', k);
   }
   const d = C.pois['dest:' + (route ? route.dest : selectedDest)];
-  s += pill(d.p, d.name.replace(' 주출입구', ''), 'var(--dest)', k);
+  s += pill(d.p, 0, d.name.replace(' 주출입구', ''), 'var(--dest)', k);
   if (me) {
-    s += `<circle cx="${me.p[0]}" cy="${me.p[1]}" r="${Math.max(me.acc, 3 * k)}" fill="var(--me)" fill-opacity=".12" stroke="var(--me)" stroke-opacity=".35" stroke-width="${k}"/>`;
-    if (heading !== null) s += `<path transform="translate(${me.p[0]} ${me.p[1]}) rotate(${heading})" d="M0 0 L${-14 * k} ${-34 * k} A36 36 0 0 1 ${14 * k} ${-34 * k} Z" fill="var(--me)" fill-opacity=".3"/>`;
-    s += `<circle cx="${me.p[0]}" cy="${me.p[1]}" r="${8 * k}" fill="var(--me)" stroke="#fff" stroke-width="${3 * k}"/>`;
+    const [mx, my] = S(me.p), r = Math.max(me.acc, 3 * k);
+    s += `<ellipse cx="${mx}" cy="${my}" rx="${r * 1.2247}" ry="${r * .7071}" fill="var(--me)" fill-opacity=".14" stroke="var(--me)" stroke-opacity=".35" stroke-width="${k}"/>`;
+    if (heading !== null) {
+      // compass heading (0 = north, clockwise) turned into an angle on this rotated, tilted map
+      const rad = heading * Math.PI / 180, ahead = S([me.p[0] + Math.sin(rad) * 30, me.p[1] - Math.cos(rad) * 30]);
+      const ang = Math.atan2(ahead[0] - mx, -(ahead[1] - my)) * 180 / Math.PI;
+      s += `<path transform="translate(${mx} ${my}) rotate(${ang})" d="M0 0 L${-14 * k} ${-34 * k} A36 36 0 0 1 ${14 * k} ${-34 * k} Z" fill="var(--me)" fill-opacity=".3"/>`;
+    }
+    s += `<circle cx="${mx}" cy="${my}" r="${8 * k}" fill="var(--me)" stroke="#fff" stroke-width="${3 * k}"/>`;
   }
-  svg.innerHTML = s;
+  $('over').innerHTML = s;
 }
 
 // ---------- gestures ----------
@@ -271,7 +362,7 @@ let pinch = null;
 function stopFollow() {
   if (follow) { follow = false; $('recenter').hidden = !me; }
 }
-svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); });
+svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]); cancelAnimationFrame(viewAnim); });
 svg.addEventListener('pointermove', e => {
   if (!pointers.has(e.pointerId)) return;
   const prev = pointers.get(e.pointerId), cur = [e.clientX, e.clientY];
@@ -295,9 +386,10 @@ svg.addEventListener('pointerup', endPointer);
 svg.addEventListener('pointercancel', endPointer);
 svg.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 1.15 : 1 / 1.15); }, { passive: false });
 function zoomAt(px, py, f) {
+  cancelAnimationFrame(viewAnim);
   const r = svg.getBoundingClientRect(), k = mPerPx();
   const mx = view.x + (px - r.left) * k, my = view.y + (py - r.top) * k;
-  const w = Math.max(60, Math.min(1400, view.w * f)), k2 = w / svg.clientWidth;
+  const w = Math.max(50, Math.min(1600, view.w * f)), k2 = w / svg.clientWidth;
   view.w = w;
   view.x = mx - (px - r.left) * k2;
   view.y = my - (py - r.top) * k2;
@@ -307,9 +399,9 @@ $('zoom-in').onclick = () => zoomAt(svg.clientWidth / 2, svg.clientHeight / 2, 1
 $('zoom-out').onclick = () => zoomAt(svg.clientWidth / 2, svg.clientHeight / 2, 1.5);
 $('recenter').onclick = () => { follow = true; $('recenter').hidden = true; centerOnMe(); };
 function centerOnMe() {
-  const h = view.w * aspect();
-  view.x = me.p[0] - view.w / 2;
-  view.y = me.p[1] - h * 0.62;   // keep the dot below the instruction card
+  const h = view.w * aspect(), [mx, my] = S(me.p);
+  view.x = mx - view.w / 2;
+  view.y = my - h * 0.62;   // keep the dot below the instruction card
   draw();
 }
 
@@ -692,12 +784,7 @@ function showIndoor() {
   $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
   $('in-prev').disabled = inStep === 0;
   $('in-next').textContent = inStep === plan.steps.length - 1 ? '처음으로' : '다음';
-  fit(Indoor.viewBounds(plan, inStep), 24, 80);
-}
-function drawIndoor() {
-  const k = mPerPx(), h = view.w * aspect();
-  svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
-  svg.innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep);
+  fitScreen(Indoor.viewBounds(plan, inStep), 24, 80);
 }
 $('in-prev').onclick = () => { if (inStep > 0) { inStep--; showIndoor(); } };
 $('in-next').onclick = () => { if (inStep < plan.steps.length - 1) { inStep++; showIndoor(); } else reset(); };

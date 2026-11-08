@@ -152,7 +152,7 @@ const Indoor = (() => {
       s += `<polygon fill="var(--side)" points="${P(a, b, z)} ${P(a, e, z)} ${P(a, e, z - t)} ${P(a, b, z - t)}"/>`;
       d += `M${P(a, b, z)}L${P(c, b, z)}L${P(c, e, z)}L${P(a, e, z)}Z`;
     }
-    return s + `<path fill-rule="evenodd" fill="#fff" stroke="var(--bldg-edge)" stroke-width=".6" d="${d}"/></g>`;
+    return s + `<path fill-rule="evenodd" fill="var(--b-top)" stroke="var(--b-line)" stroke-width=".6" d="${d}"/></g>`;
   }
 
   function drawIso(k, plan, stepIdx) {
