@@ -22,20 +22,42 @@ const Indoor = (() => {
     return n.label || n.name;
   }
 
-  // "5남 335", "5S335", "남335", "5동211a" -> node id. Missing rooms fall back to the nearest number.
+  // Reads a room however people type it: "5E 107A", "5e-107a", "5동 107A", "5동관 107", "동107", "5남 335",
+  // "5호관 5S335", "E107". "107" alone, or 107 when the room is split into 107A/107B, comes back as a list to pick from.
+  const ROOMS = [...NODES.values()].filter(n => n.kind === 'room' && !n.id.includes('화장실'));
+  const roomName = n => `${t('wing_' + n.w)} ${n.id.slice(2)}`;
+  function readable(text) {
+    return text.normalize('NFKC').toUpperCase()
+      .replace(/5\s*호\s*관/g, '')
+      .replace(/EAST/g, 'E').replace(/WEST/g, 'W').replace(/SOUTH/g, 'S').replace(/NORTH/g, 'N')
+      .replace(/호실|호|관|[\s\-_.·,/()]/g, '');
+  }
   function parseRoom(text) {
-    const m = text.replace(/[\s\-호]/g, '').toUpperCase().match(/^5?(남|동|서|북|S|E|W|N)(\d)(\d{2})([A-Z])?$/);
-    if (!m) return null;
-    const w = WING[m[1]], f = +m[2], num = +m[3], suffix = m[4] || '';
-    const want = `5${w}${f}${m[3]}${suffix}`;
-    const shown = `${t('wing_' + w)} ${f}${m[3]}${suffix}`;
-    const decode = t('room_decode', { wing: t('wing_' + w), f, room: f + m[3] });
-    if (NODES.has(want)) return { id: want, label: shown, decode };
-    const sameNum = [...NODES.values()].find(n => n.kind === 'room' && n.w === w && n.f === f && n.num === num);
-    if (sameNum) return { id: sameNum.id, label: shown, decode };
-    const near = [...NODES.values()].filter(n => n.kind === 'room' && n.w === w && n.f === f && !n.id.includes('화장실'))
-      .sort((a, b) => Math.abs(a.num - num) - Math.abs(b.num - num))[0];
-    return near ? { id: near.id, label: shown, decode, missing: true, near: near.label } : { id: null, label: shown, decode, missing: true };
+    const s = readable(text);
+    const withWing = s.match(/^(\d)?(남|동|서|북|S|E|W|N)(\d)(\d{2})([A-Z])?$/);
+    const numberOnly = s.match(/^(\d)(\d{2})([A-Z])?$/);
+    if (!withWing && !numberOnly) return null;
+    const [w, f, nn, suffix] = withWing ? [WING[withWing[2]], +withWing[3], withWing[4], withWing[5] || ''] : [null, +numberOnly[1], numberOnly[2], numberOnly[3] || ''];
+    const num = +nn, room = `${f}${nn}${suffix}`;
+    const otherBuilding = withWing && withWing[1] && withWing[1] !== '5';
+    const sameNum = ROOMS.filter(n => n.f === f && n.num === num && (!w || n.w === w));
+    const exact = sameNum.filter(n => n.id.slice(5) === suffix);
+    const decode = n => t('room_decode', { wing: t('wing_' + n.w), f, room: n.id.slice(2) }) + (n.id.length > 5 ? ' · ' + t('room_split_tag', { base: `${f}${nn}` }) : '');
+    const found = n => ({ id: n.id, label: roomName(n), decode: decode(n), note: otherBuilding ? t('room_other_building', { label: roomName(n) }) : '' });
+    if (!w) {
+      // only a number: which wing?
+      const list = suffix ? exact : sameNum;
+      if (!list.length) return { id: null, label: room, missing: true };
+      return list.length === 1 ? found(list[0]) : { candidates: list.map(n => ({ id: n.id, label: roomName(n), decode: decode(n) })), note: t('room_number_only', { room }) };
+    }
+    if (exact.length) return found(exact[0]);
+    if (sameNum.length) {
+      // e.g. 107 typed but the room is split into 107A / 107B
+      return { candidates: sameNum.map(n => ({ id: n.id, label: roomName(n), decode: decode(n) })), note: t('room_split_note', { base: `${t('wing_' + w)} ${f}${nn}`, list: sameNum.map(n => n.id.slice(5)).join('·') }) };
+    }
+    const label = `${t('wing_' + w)} ${room}`;
+    const near = ROOMS.filter(n => n.w === w && n.f === f).sort((a, b) => Math.abs(a.num - num) - Math.abs(b.num - num))[0];
+    return near ? { id: near.id, label, decode: decode(near), missing: true, near: roomName(near) } : { id: null, label, missing: true };
   }
 
   function route(from, to, { nw = false } = {}) {

@@ -464,20 +464,37 @@ function renderQuick() {
     .map(([id, text]) => `<button class="mini" data-quick="${id}" aria-pressed="${!!target && (target.id === id || (id === 'tower' && target.id.startsWith('T:')))}">${text}</button>`).join('');
   $('tower-floors').innerHTML = TOWER_FLOORS.map(f => `<button class="mini" data-tower="${f}" aria-pressed="${!!target && target.id === 'T:' + f}">${Indoor.label('T:' + f)}</button>`).join('');
 }
-function onRoomInput() {
-  const text = $('room').value.trim();
-  $('tower-floors').hidden = true;
-  if (!text) { setTarget(null); $('room-hint').textContent = ''; renderQuick(); return; }
+// Typed room -> a hint line, and buttons when it could be more than one room.
+function readRoom(inputId, hintId, candsId, pick) {
+  const text = $(inputId).value.trim(), hint = $(hintId), cands = $(candsId);
+  cands.innerHTML = '';
+  if (!text) { hint.textContent = ''; return pick(null); }
   const r = Indoor.parseRoom(text);
-  const hint = $('room-hint');
-  if (!r) { setTarget(null); hint.className = 'hint bad'; hint.textContent = t('room_unknown'); }
-  else if (!r.id) { setTarget(null); hint.className = 'hint bad'; hint.textContent = t('room_missing_none', { label: r.label }); }
-  else {
-    setTarget({ id: r.id, label: r.label });
-    hint.className = r.missing ? 'hint bad' : 'hint ok';
-    hint.textContent = r.missing ? t('room_missing', { label: r.label, near: r.near }) : r.decode;
+  if (!r) { hint.className = 'hint bad'; hint.textContent = t('room_unknown'); return pick(null); }
+  if (r.candidates) {
+    hint.className = 'hint'; hint.textContent = r.note;
+    cands.innerHTML = r.candidates.map(c => `<button class="mini" data-cand="${c.id}" data-for="${candsId}">${c.label}</button>`).join('');
+    cands._list = r.candidates;
+    return pick(null);
   }
+  if (!r.id) { hint.className = 'hint bad'; hint.textContent = t('room_missing_none', { label: r.label }); return pick(null); }
+  hint.className = r.missing ? 'hint bad' : 'hint ok';
+  hint.textContent = r.missing ? t('room_missing', { label: r.label, near: r.near }) : [r.decode, r.note].filter(Boolean).join(' · ');
+  pick({ id: r.id, label: r.label });
+}
+function onRoomInput() {
+  $('tower-floors').hidden = true;
+  readRoom('room', 'room-hint', 'room-cands', setTarget);
   renderQuick();
+}
+function chooseCandidate(b) {
+  const box = $(b.dataset.for), c = box._list.find(x => x.id === b.dataset.cand);
+  for (const x of box.children) x.setAttribute('aria-pressed', x === b);
+  const hint = $(b.dataset.for === 'room-cands' ? 'room-hint' : 'near-hint');
+  hint.className = 'hint ok';
+  hint.textContent = c.decode;
+  if (b.dataset.for === 'room-cands') { setTarget({ id: c.id, label: c.label }); renderQuick(); }
+  else { insideNear = c.id; renderInsidePicks(); }
 }
 // The entrance that makes the whole walk shortest: outdoor metres plus the indoor route.
 function pickEntrance(from) {
@@ -737,6 +754,7 @@ let insideFloor = null, insideWing = null, insideNear = null;
 function openInside() {
   insideFloor = insideWing = insideNear = null;
   $('near').value = '';
+  $('near-cands').innerHTML = '';
   $('near-hint').textContent = '';
   $('inside-title').textContent = t('inside_title');
   $('inside-near-label').textContent = t('inside_near');
@@ -794,10 +812,7 @@ $('nw').onchange = () => { if (phase === 'indoor') enterIndoor(indoorFrom); };
 $('go-inside').onclick = openInside;
 $('inside-go').onclick = () => enterIndoor(insideStart());
 $('near').oninput = () => {
-  const r = Indoor.parseRoom($('near').value.trim());
-  insideNear = r && r.id && !r.missing ? r.id : null;
-  $('near-hint').className = insideNear ? 'hint ok' : 'hint';
-  $('near-hint').textContent = insideNear ? r.decode : '';
+  readRoom('near', 'near-hint', 'near-cands', p => { insideNear = p ? p.id : null; });
   renderInsidePicks();
 };
 $('room').oninput = onRoomInput;
@@ -807,8 +822,9 @@ $('room').placeholder = t('room_ph');
 document.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
-  if (b.dataset.quick === 'tower') { $('room').value = ''; $('room-hint').textContent = ''; setTarget(null); renderQuick(); $('tower-floors').hidden = false; }
-  else if (b.dataset.quick) { $('room').value = ''; $('room-hint').textContent = ''; $('tower-floors').hidden = true; setTarget({ id: b.dataset.quick, label: Indoor.label(b.dataset.quick) }); renderQuick(); }
+  if (b.dataset.cand) chooseCandidate(b);
+  else if (b.dataset.quick === 'tower') { $('room').value = ''; $('room-hint').textContent = ''; setTarget(null); renderQuick(); $('tower-floors').hidden = false; }
+  else if (b.dataset.quick) { $('room').value = ''; $('room-hint').textContent = ''; $('room-cands').innerHTML = ''; $('tower-floors').hidden = true; setTarget({ id: b.dataset.quick, label: Indoor.label(b.dataset.quick) }); renderQuick(); }
   else if (b.dataset.tower) { setTarget({ id: 'T:' + b.dataset.tower, label: Indoor.label('T:' + b.dataset.tower) }); renderQuick(); }
   else if (b.dataset.floor) { insideFloor = +b.dataset.floor; insideWing = null; renderInsidePicks(); }
   else if (b.dataset.wing) { insideWing = b.dataset.wing; renderInsidePicks(); }
