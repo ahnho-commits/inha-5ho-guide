@@ -9,7 +9,7 @@
 // GitHub Pages lets phones keep this page for 10 minutes. Ask for the current build number (never cached)
 // and reopen at a fresh address if this copy is older. Sends nothing but the request for version.txt.
 (function () {
-  var BUILD = '70c08597';
+  var BUILD = 'd623386b';
   fetch('version.txt?' + Date.now(), { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (v) {
@@ -20,7 +20,7 @@
 })();
 </script>
 <style>
-/* A2 "크림과 세이지": cream ground, sage trees, terracotta route. Soft, rounded, still high-contrast text for daylight. */
+/* A2 "크림과 세이지": cream ground, sage fields, terracotta route. Soft, rounded, still high-contrast text for daylight. */
 :root {
   color-scheme: light;
   --bg: #F4EEDF; --card: #FFFDF8; --ink: #43301F; --muted: #7D6855; --line: #E6DACA;
@@ -30,7 +30,6 @@
   --ground: #F4EEDF; --pitch: #D7E5C9; --pitch-edge: #BCD1AA; --track: #E9C7B3; --road: #FFFFFF; --road-edge: #E3D6C3;
   --b-top: #FFF8EF; --b-side: #EADCC8; --b-side2: #DCCAB2; --b-line: #D2C0A6;
   --main-top: #FDE6D6; --main-side: #F2C9B1; --main-side2: #E7B699;
-  --tree: #A3C4A0; --tree2: #86AE83; --trunk: #A78467;
   /* the indoor floors read the same palette */
   --side: var(--b-side); --side2: var(--b-side2); --bldg-edge: #CDB9A0; --main: var(--main-top); --main-edge: var(--route);
   --f: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
@@ -98,6 +97,10 @@ button:active { transform: scale(.97); }
 
 svg text { font-family: var(--f); }
 svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
+#base .bldg { transition: opacity .35s ease; }
+#base .bldg.xray { opacity: .16; }
+/* phones first; on wide screens keep the cards a readable width */
+.top > *, .sheet { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -211,10 +214,10 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 
 <span class="credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
-<script src="i18n.js?v=70c08597"></script>
-<script src="campus-data.js?v=70c08597"></script>
-<script src="indoor-data.js?v=70c08597"></script>
-<script src="indoor.js?v=70c08597"></script>
-<script src="app.js?v=70c08597"></script>
+<script src="i18n.js?v=d623386b"></script>
+<script src="campus-data.js?v=d623386b"></script>
+<script src="indoor-data.js?v=d623386b"></script>
+<script src="indoor.js?v=d623386b"></script>
+<script src="app.js?v=d623386b"></script>
 </body>
 </html>

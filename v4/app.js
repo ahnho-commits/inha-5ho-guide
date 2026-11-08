@@ -255,30 +255,6 @@ function buildingSvg(b) {
   return walls.map(w => w.s).join('') + roof;
 }
 
-function makeTrees() {
-  let seed = 11;
-  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-  const segs = C.roads.flatMap(r => r.p.slice(1).map((q, i) => [r.p[i], q]));
-  const nearRoad = p => segs.some(([a, b]) => nearestOnSegment(p, a, b).d < 4.5);
-  const out = [];
-  for (const r of C.roads) {
-    if (!['service', 'footway', 'pedestrian', 'residential', 'tertiary'].includes(r.t)) continue;
-    for (let i = 1; i < r.p.length; i++) {
-      const a = r.p[i - 1], b = r.p[i], L = dist(a, b), n = Math.floor(L / 24);
-      for (let j = 0; j < n; j++) {
-        const t = (j + .5) / n, off = (j % 2 ? 1 : -1) * (7 + rnd() * 3);
-        const p = [a[0] + (b[0] - a[0]) * t - (b[1] - a[1]) / L * off, a[1] + (b[1] - a[1]) * t + (b[0] - a[0]) / L * off];
-        if (inArea(p, 0) && !C.buildings.some(bd => solid(bd, p)) && !C.pitches.some(pt => inRing(p, pt.p)) && !nearRoad(p)) out.push(p);
-      }
-    }
-  }
-  return out;
-}
-function treeSvg(p) {
-  const [x, y] = S(p), r = 3.4;
-  return `<rect x="${(x - .6).toFixed(1)}" y="${(y - 4).toFixed(1)}" width="1.2" height="4" rx=".5" fill="var(--trunk)"/><circle cx="${x.toFixed(1)}" cy="${(y - 6).toFixed(1)}" r="${r}" fill="var(--tree)"/><circle cx="${(x + 1.2).toFixed(1)}" cy="${(y - 7).toFixed(1)}" r="${r * .5}" fill="var(--tree2)"/>`;
-}
-
 const BASE3D = (() => {
   const [x0, y0, x1, y1] = C.area;
   let s = `<polygon fill="var(--ground)" points="${pts([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])}"/>`;
@@ -288,12 +264,37 @@ const BASE3D = (() => {
   s += roads.map(r => `<path d="${pathOf(r.p)}" fill="none" stroke="var(--road-edge)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${((ROAD_W[r.t] || 4) + 1.6) * .8}"/>`).join('');
   s += roads.map(r => `<path d="${pathOf(r.p)}" fill="none" stroke="var(--road)" stroke-linecap="round" stroke-linejoin="round" stroke-width="${(ROAD_W[r.t] || 4) * .8}"/>`).join('');
   // Back to front: anything lower on screen is nearer the camera and drawn later.
-  const items = [
-    ...C.buildings.map(b => ({ d: Math.max(...b.p.map(p => S(p)[1])), s: buildingSvg(b) })),
-    ...makeTrees().map(p => ({ d: S(p)[1], s: treeSvg(p) })),
-  ].sort((a, b) => a.d - b.d);
+  const items = C.buildings.map((b, i) => ({ d: Math.max(...b.p.map(p => S(p)[1])), s: `<g class="bldg" data-b="${i}">${buildingSvg(b)}</g>` }))
+    .sort((a, b) => a.d - b.d);
   return s + items.map(i => i.s).join('');
 })();
+
+// Each building's outline on screen (roof and footprint together), so we can tell which ones hide the route.
+function hull(points) {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]), cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [], upper = [];
+  for (const q of p) { while (lower.length > 1 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop(); lower.push(q); }
+  for (const q of p.reverse()) { while (upper.length > 1 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop(); upper.push(q); }
+  return lower.slice(0, -1).concat(upper.slice(0, -1));
+}
+const SHADOWS = C.buildings.map(b => {
+  const h = Math.min(MAX_H, (b.lv || 3) * 3.4);
+  return hull(b.p.flatMap(p => [S(p, 0), S(p, h)]));
+});
+// Fade every building that stands between the camera and the route, so the whole path stays visible.
+let xrayFor = null;
+function applyXray() {
+  if (xrayFor === route) return;
+  xrayFor = route;
+  const hide = new Set();
+  if (route) {
+    for (let s = 0; s <= route.total; s += 4) {
+      const q = S(pointAt(route, s));
+      SHADOWS.forEach((poly, i) => { if (!hide.has(i) && inRing(q, poly)) hide.add(i); });
+    }
+  }
+  for (const g of document.querySelectorAll('#base .bldg')) g.classList.toggle('xray', hide.has(+g.dataset.b));
+}
 
 let route = null, me = null, heading = null, focusStep = null;
 let progress = 0;
@@ -313,7 +314,8 @@ function draw() {
     $('over').innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep);
     return;
   }
-  if (baseShown !== 'outdoor') { $('base').innerHTML = BASE3D; baseShown = 'outdoor'; }
+  if (baseShown !== 'outdoor') { $('base').innerHTML = BASE3D; baseShown = 'outdoor'; xrayFor = undefined; }
+  applyXray();
   let s = '';
   if (route) {
     const doneTo = Math.min(progress, route.total), done = [], rest = [];
