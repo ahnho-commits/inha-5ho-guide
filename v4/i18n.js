@@ -27,6 +27,7 @@ const STR = {
     inside_start: '여기서 출발',
 
     nw_toggle: '5북↔5서 통로 이용 (현장 확인 전)',
+    indoor_go: '건물 안으로 →',
     arrived_banner: '{entrance}에 도착했어요. 이제 건물 안 안내예요.',
     indoor_title: '{from} → {to}',
     indoor_sub: '안내 {n}단계 · 층 이동 {floors}번',

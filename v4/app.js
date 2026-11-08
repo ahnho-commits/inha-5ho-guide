@@ -9,7 +9,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const project = (lat, lon) => [(lon - C.origin[1]) * C.kx, -(lat - C.origin[0]) * C.ky];
 
 const STARTS = {
-  station: { title: '인하대역', sub: '4번 출구 · 운동장 바깥쪽으로 도는 길 (확인 중)' },
+  station: { title: '인하대역', sub: '4번 출구 · 운동장 남쪽·동쪽으로 돌아가는 길' },
   main: { title: '정문', sub: '' },
   back: { title: '후문', sub: '' },
   side: { title: '쪽문', sub: '60주년기념관 옆 작은 문' },
@@ -605,12 +605,13 @@ function showManualStep() {
   focusStep = st;
   showInstr(st, st.at - from.at);
   $('prev-step').disabled = stepIdx === 0;
-  $('next-step').textContent = stepIdx >= route.steps.length - 2 ? '전체 경로 보기' : '다음 안내';
+  $('next-step').textContent = stepIdx >= route.steps.length - 2 ? t('indoor_go') : '다음 안내';
   const seg = route.pts.filter((_, i) => route.cum[i] >= from.at - 1 && route.cum[i] <= st.at + 1);
   fit([pointAt(route, from.at), ...seg, pointAt(route, st.at)], 50, 200);
 }
 $('next-step').onclick = () => {
-  if (stepIdx >= route.steps.length - 2) { focusStep = null; progress = 0; overview(); return; }
+  // Last outdoor step: at the entrance, so carry on inside.
+  if (stepIdx >= route.steps.length - 2) return enterIndoor('ENT:' + route.dest);
   stepIdx++;
   showManualStep();
 };
