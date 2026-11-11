@@ -292,5 +292,11 @@
   "photo.open_label": "Phóng to {n} ảnh thực tế",
   "ui.privacy_title": "Quyền riêng tư và nhật ký truy cập",
   "ui.privacy_body": "Ứng dụng này không gửi số phòng bạn nhập, tuyến đường đã tính hoặc tọa độ vị trí của thiết bị cho đơn vị vận hành trang web và không lưu trữ những thông tin đó. Ứng dụng cũng không sử dụng công cụ phân tích hay theo dõi quảng cáo. GitHub Pages, dịch vụ cung cấp các trang và tệp ảnh, ghi lại địa chỉ IP của người truy cập vì mục đích bảo mật. Nếu bạn cho phép truy cập vị trí, dịch vụ định vị của trình duyệt hoặc hệ điều hành có thể xử lý thông tin độc lập với ứng dụng này. Bạn cũng có thể sử dụng hướng dẫn này mà không bật vị trí bằng cách tự chọn điểm xuất phát.",
-  "ui.privacy_policy": "Thông tin về việc thu thập dữ liệu của GitHub"
+  "ui.privacy_policy": "Thông tin về việc thu thập dữ liệu của GitHub",
+  "ui.route_more": "Thêm",
+  "ui.route_photo_expand": "Mở rộng ảnh",
+  "ui.route_photo_collapse": "Thu gọn ảnh",
+  "ui.route_details": "Hướng dẫn chi tiết",
+  "ui.route_hide_details": "Thu gọn hướng dẫn",
+  "ui.photo_swipe_hint": "Vuốt lên để mở rộng, vuốt xuống để thu gọn. Bạn cũng có thể nhấn nút."
 }

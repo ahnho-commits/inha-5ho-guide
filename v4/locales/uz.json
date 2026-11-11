@@ -292,5 +292,11 @@
   "photo.open_label": "Joyida olingan {n} ta suratni kattalashtirish",
   "ui.privacy_title": "Maxfiylik va tashrif qaydlari",
   "ui.privacy_body": "Ushbu ilova siz kiritgan xona raqamini, hisoblangan yo‘nalishni va qurilmangizning joylashuv koordinatalarini sayt operatoriga yubormaydi va saqlamaydi. Ilova tahlil vositalaridan yoki reklama maqsadidagi kuzatuv vositalaridan foydalanmaydi. Sahifalar va rasm fayllarini taqdim etuvchi GitHub Pages xavfsizlik maqsadida tashrif buyuruvchilarning IP manzillarini qayd etadi. Joylashuvdan foydalanishga ruxsat bersangiz, brauzer yoki operatsion tizimning joylashuv xizmati ma’lumotlarni alohida qayta ishlashi mumkin. Joylashuv funksiyasisiz ham boshlang‘ich nuqtani qo‘lda tanlab foydalanishingiz mumkin.",
-  "ui.privacy_policy": "GitHub ma’lumot yig‘ishi haqida"
+  "ui.privacy_policy": "GitHub ma’lumot yig‘ishi haqida",
+  "ui.route_more": "Ko‘proq",
+  "ui.route_photo_expand": "Suratni ochish",
+  "ui.route_photo_collapse": "Suratni yig‘ish",
+  "ui.route_details": "Batafsil yo‘riqnoma",
+  "ui.route_hide_details": "Yo‘riqnomani yig‘ish",
+  "ui.photo_swipe_hint": "Ochish uchun yuqoriga, yig‘ish uchun pastga suring. Tugmani ham bosishingiz mumkin."
 }

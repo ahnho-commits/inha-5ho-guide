@@ -21,7 +21,9 @@ const LanguageUI = (() => {
       document.documentElement.style.setProperty('--credit-space', Math.ceil(document.querySelector('.credit').getBoundingClientRect().height + 14) + 'px');
       const bottom = Math.max(document.querySelector('.top').getBoundingClientRect().bottom, document.querySelector('.language-bar').getBoundingClientRect().bottom);
       const sheet = document.querySelector('.sheet:not([hidden])');
-      if (sheet) {
+      if (sheet?.id === 's-indoor' && typeof RouteSheet !== 'undefined') {
+        RouteSheet.measure();
+      } else if (sheet) {
         const mapSpace = sheet.id === 's-start' ? (innerHeight <= 500 ? 100 : 180) : 84;
         sheet.style.maxHeight = Math.max(120, Math.min(innerHeight * .78, innerHeight - bottom - mapSpace)) + 'px';
       }

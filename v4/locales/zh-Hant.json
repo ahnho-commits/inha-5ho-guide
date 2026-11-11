@@ -292,5 +292,11 @@
   "nav.room_restroom": "{room}（洗手間）",
   "ui.privacy_title": "隱私與存取記錄",
   "ui.privacy_body": "本應用程式不會儲存您輸入的房號、計算出的路線或裝置的定位座標，也不會將這些資訊傳送給網站營運者，且不使用分析或廣告追蹤工具。提供網頁與照片檔案的 GitHub Pages 會基於安全目的記錄訪客的 IP 位址。允許定位存取後，瀏覽器或作業系統的定位服務可能會另外處理相關資訊。您也可以手動選擇出發點，在不使用定位功能的情況下使用本指南。",
-  "ui.privacy_policy": "GitHub 資料收集說明"
+  "ui.privacy_policy": "GitHub 資料收集說明",
+  "ui.route_more": "更多",
+  "ui.route_photo_expand": "展開照片",
+  "ui.route_photo_collapse": "收起照片",
+  "ui.route_details": "詳細指引",
+  "ui.route_hide_details": "收起指引",
+  "ui.photo_swipe_hint": "向上滑動可展開，向下滑動可收起，也可以點按按鈕。"
 }

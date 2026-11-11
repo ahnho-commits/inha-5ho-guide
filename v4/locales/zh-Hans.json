@@ -292,5 +292,11 @@
   "nav.room_restroom": "{room}（卫生间）",
   "ui.privacy_title": "隐私与访问记录",
   "ui.privacy_body": "本应用不会保存您输入的房间号、计算出的路线和设备定位坐标，也不会将这些信息发送给网站运营者，同时不使用分析或广告跟踪工具。提供网页和照片文件的 GitHub Pages 会出于安全目的记录访客的 IP 地址。允许定位后，浏览器或操作系统的定位服务可能会另行处理相关信息。您也可以手动选择出发点，在不使用定位功能的情况下使用本指南。",
-  "ui.privacy_policy": "GitHub 数据收集说明"
+  "ui.privacy_policy": "GitHub 数据收集说明",
+  "ui.route_more": "更多",
+  "ui.route_photo_expand": "展开照片",
+  "ui.route_photo_collapse": "收起照片",
+  "ui.route_details": "详细指引",
+  "ui.route_hide_details": "收起指引",
+  "ui.photo_swipe_hint": "向上滑动可展开，向下滑动可收起，也可以点按按钮。"
 }

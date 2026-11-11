@@ -13,4 +13,4 @@ All current translation characters, the eleven language names and navigation sym
 
 Fonts are served from this site's own directory. No Google Fonts or other third-party font request is needed.
 
-Rebuild after translation changes using work/i18n-v5/font-build.py in the development workspace. Source fonts and temporary Python build tools are not included in the service. Coverage checks establish that characters exist in the fonts; browser layout tests and physical-device rendering checks are separate.
+Rebuild after translation changes using work/mobile-v7/font-build.py in the development workspace. Source fonts and temporary Python build tools are not included in the service. Coverage checks establish that characters exist in the fonts; browser layout tests and physical-device rendering checks are separate.

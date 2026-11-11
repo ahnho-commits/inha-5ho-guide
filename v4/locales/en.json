@@ -292,5 +292,11 @@
   "nav.room_restroom": "{room} (restroom)",
   "ui.privacy_title": "Privacy and access logs",
   "ui.privacy_body": "This app does not send the room number you enter, the calculated route or your device’s location coordinates to the site operator, or save that information. It does not use analytics or advertising trackers. GitHub Pages, which serves the pages and photo files, logs visitors’ IP addresses for security. If you allow location access, your browser or operating system’s location service may process information separately. You can also use the guide without location access by choosing a starting point manually.",
-  "ui.privacy_policy": "GitHub’s data collection notice"
+  "ui.privacy_policy": "GitHub’s data collection notice",
+  "ui.route_more": "More",
+  "ui.route_photo_expand": "Expand photo",
+  "ui.route_photo_collapse": "Collapse photo",
+  "ui.route_details": "Detailed directions",
+  "ui.route_hide_details": "Hide details",
+  "ui.photo_swipe_hint": "Swipe up to expand or down to collapse. You can also tap the button."
 }

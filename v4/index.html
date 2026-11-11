@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-6sZhqfT9Ml91zxy/BGSMz92laNYocwrUBu9hbqUywPA='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-JQx09yKghuhi/O83W9NWQs+2x3y7E4wz/Y+y+SQrbo4='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ECEFF3">
 <title>5호관 길찾기</title>
@@ -11,7 +11,7 @@
 // GitHub Pages lets phones keep this page for 10 minutes. Ask for the current build number (never cached)
 // and reopen at a fresh address if this copy is older. Sends nothing but the request for version.txt.
 (function () {
-  var BUILD = '7826ecf78979';
+  var BUILD = '49508e1a432e';
   fetch('version.txt', { cache: 'no-cache', credentials: 'omit', referrerPolicy: 'no-referrer' })
     .then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (v) {
@@ -111,12 +111,13 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 .top > *, .sheet { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
-<link rel="stylesheet" href="photo-gallery.css?v=7826ecf78979">
-<link rel="stylesheet" href="language-ui.css?v=7826ecf78979">
-<link rel="stylesheet" href="fonts.css?v=7826ecf78979">
+<link rel="stylesheet" href="photo-gallery.css?v=49508e1a432e">
+<link rel="stylesheet" href="language-ui.css?v=49508e1a432e">
+<link rel="stylesheet" href="fonts.css?v=49508e1a432e">
+<link rel="stylesheet" href="route-sheet.css?v=49508e1a432e">
 </head>
 <body>
-<div class="language-bar"><button id="language-toggle" class="language-toggle" type="button" aria-expanded="false" aria-controls="language-panel" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span lang="en">Language</span><span id="language-current" class="language-current">한국어</span><span aria-hidden="true">▾</span></button></div>
+<div class="language-bar"><button id="language-toggle" class="language-toggle" type="button" aria-expanded="false" aria-controls="language-panel" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span lang="en">Language</span><span id="language-current" class="language-current">한국어</span><span aria-hidden="true">▾</span></button><button type="button" id="route-more-toggle" aria-expanded="false" aria-controls="route-more-panel" aria-haspopup="dialog" aria-label="더보기" data-i18n-aria="ui.route_more" hidden><span aria-hidden="true">⋯</span></button></div>
 <div id="language-panel" class="language-panel" role="dialog" aria-modal="true" aria-labelledby="language-title" hidden><header><h2 id="language-title" data-i18n="ui.language_choose">언어 선택</h2><button id="language-close" type="button" aria-label="닫기" data-i18n-aria="ui.language_close">×</button></header><p data-i18n="ui.language_note">언어를 바꿔도 현재 길찾기는 유지됩니다.</p><div id="language-options" class="language-options"></div></div>
 
 <svg id="map" role="img" aria-label="인하대 캠퍼스 3D 지도" data-i18n-aria="ui.map_label"><g id="base"></g><g id="over"></g></svg>
@@ -126,6 +127,7 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
     <div class="icon" id="i-icon"></div>
     <div class="dist" id="i-dist"></div>
     <div class="say" id="i-say"></div>
+    <button type="button" id="route-detail-toggle" aria-expanded="false" aria-controls="i-to" hidden><span data-i18n="ui.route_details">자세한 안내</span><span aria-hidden="true">↓</span></button>
     <div class="meta"><span id="i-to"></span><span id="i-eta"></span></div>
     <button class="thumb" id="i-photo" hidden aria-label="실제 사진 크게 보기" data-i18n-aria="ui.photo_expand"><img alt=""></button>
   </div>
@@ -216,7 +218,14 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 <!-- 5c. Indoor guidance -->
 <section class="sheet" id="s-indoor" hidden>
   <div class="step-photo" id="step-photo" hidden>
-    <strong class="step-photo-cue" id="step-photo-cue"></strong>
+    <button type="button" id="route-photo-toggle" aria-expanded="false" aria-controls="route-photo-details" aria-describedby="route-swipe-hint">
+      <span class="route-grip" aria-hidden="true"></span>
+      <img id="route-photo-thumb" alt="" decoding="async" draggable="false">
+      <span class="route-photo-heading"><strong class="step-photo-cue" id="step-photo-cue"></strong><span class="route-photo-labels"><span id="route-photo-label" data-i18n="ui.route_photo_expand">사진 펼치기</span><span id="route-photo-count"></span></span></span>
+      <span class="route-toggle-arrow" aria-hidden="true">↑</span>
+    </button>
+    <span id="route-swipe-hint" class="route-sr-only" data-i18n="ui.photo_swipe_hint">위로 밀면 펼쳐지고 아래로 밀면 접혀요. 버튼을 눌러도 돼요.</span>
+    <div id="route-photo-details" hidden>
     <div class="step-photo-body">
       <img id="step-photo-image" alt="" decoding="async">
       <div class="step-photo-copy">
@@ -225,12 +234,19 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
       </div>
     </div>
     <p class="step-photo-schematic" id="step-photo-schematic" hidden data-i18n="photo.schematic">계단 그림은 개략도예요. 실제 방향은 사진과 층 표지를 확인하세요.</p>
+    </div>
   </div>
-  <div class="row"><button class="btn alt" id="in-prev" data-i18n="ui.prev">이전</button><button class="btn" id="in-next" data-i18n="ui.next">다음</button></div>
+  <div class="row route-navigation"><button class="btn alt" id="in-prev" data-i18n="ui.prev">이전</button><button class="btn" id="in-next" data-i18n="ui.next">다음</button></div>
+</section>
+
+<div id="route-more-overlay" hidden>
+ <section id="route-more-panel" role="dialog" aria-modal="true" aria-labelledby="route-more-title">
+  <header><h2 id="route-more-title" data-i18n="ui.route_more">더보기</h2><button type="button" id="route-more-close" aria-label="닫기" data-i18n-aria="photo.close">×</button></header>
   <label class="check"><input type="checkbox" id="nw"> <span id="nw-label"></span></label>
   <details class="indoor-data-note"><summary data-i18n="ui.map_accuracy">지도 정확도 안내</summary><p class="note" id="in-note"></p></details>
   <button class="btn alt" data-back data-i18n="ui.home">처음으로</button>
-</section>
+ </section>
+</div>
 
 <div class="viewer" id="viewer" hidden><img alt=""><p></p></div>
 
@@ -246,17 +262,18 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 
 <span class="credit" data-i18n="ui.credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
-<script src="locales.js?v=7826ecf78979"></script>
-<script src="i18n.js?v=7826ecf78979"></script>
-<script src="campus-data.js?v=7826ecf78979"></script>
-<script src="indoor-data.js?v=7826ecf78979"></script>
-<script src="field-route-data.js?v=7826ecf78979"></script>
-<script src="indoor.js?v=7826ecf78979"></script>
-<script src="app.js?v=7826ecf78979"></script>
-<script src="photo-guides.js?v=7826ecf78979"></script>
-<script src="route-photo-data.js?v=7826ecf78979"></script>
-<script src="photo-gallery.js?v=7826ecf78979"></script>
-<script src="route-photos.js?v=7826ecf78979"></script>
-<script src="language-ui.js?v=7826ecf78979"></script>
+<script src="locales.js?v=49508e1a432e"></script>
+<script src="i18n.js?v=49508e1a432e"></script>
+<script src="campus-data.js?v=49508e1a432e"></script>
+<script src="indoor-data.js?v=49508e1a432e"></script>
+<script src="field-route-data.js?v=49508e1a432e"></script>
+<script src="indoor.js?v=49508e1a432e"></script>
+<script src="app.js?v=49508e1a432e"></script>
+<script src="photo-guides.js?v=49508e1a432e"></script>
+<script src="route-photo-data.js?v=49508e1a432e"></script>
+<script src="photo-gallery.js?v=49508e1a432e"></script>
+<script src="route-photos.js?v=49508e1a432e"></script>
+<script src="route-sheet.js?v=49508e1a432e"></script>
+<script src="language-ui.js?v=49508e1a432e"></script>
 </body>
 </html>

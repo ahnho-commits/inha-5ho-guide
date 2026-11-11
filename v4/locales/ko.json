@@ -292,5 +292,11 @@
   "nav.room_restroom": "{room} (화장실)",
   "ui.privacy_title": "개인정보·접속 기록",
   "ui.privacy_body": "이 앱은 입력한 호실, 계산한 경로와 기기의 위치 좌표를 운영자에게 전송하거나 저장하지 않으며, 분석·광고 추적 도구를 사용하지 않습니다. 페이지와 사진 파일을 제공하는 GitHub Pages는 보안을 위해 접속 IP를 기록합니다. 위치 권한을 허용하면 브라우저·운영체제의 위치 서비스가 별도로 정보를 처리할 수 있습니다. 위치 기능 없이 출발지를 직접 골라 이용할 수도 있습니다.",
-  "ui.privacy_policy": "GitHub의 데이터 수집 안내"
+  "ui.privacy_policy": "GitHub의 데이터 수집 안내",
+  "ui.route_more": "더보기",
+  "ui.route_photo_expand": "사진 펼치기",
+  "ui.route_photo_collapse": "사진 접기",
+  "ui.route_details": "자세한 안내",
+  "ui.route_hide_details": "안내 접기",
+  "ui.photo_swipe_hint": "위로 밀면 펼쳐지고 아래로 밀면 접혀요. 버튼을 눌러도 돼요."
 }

@@ -292,5 +292,11 @@
   "nav.room_restroom": "{room}（トイレ）",
   "ui.privacy_title": "プライバシーとアクセス記録",
   "ui.privacy_body": "このアプリは、入力された部屋番号、計算した経路、端末の位置座標をサイト運営者に送信したり保存したりせず、アクセス解析や広告追跡ツールも使用しません。ページや写真ファイルを配信する GitHub Pages は、セキュリティのためにアクセス元の IP アドレスを記録します。位置情報の利用を許可すると、ブラウザーや OS の位置情報サービスが別途情報を処理する場合があります。位置情報を使わず、出発地点を手動で選んで利用することもできます。",
-  "ui.privacy_policy": "GitHub のデータ収集について"
+  "ui.privacy_policy": "GitHub のデータ収集について",
+  "ui.route_more": "その他",
+  "ui.route_photo_expand": "写真を展開",
+  "ui.route_photo_collapse": "写真を折りたたむ",
+  "ui.route_details": "詳しい案内",
+  "ui.route_hide_details": "案内を折りたたむ",
+  "ui.photo_swipe_hint": "上にスワイプすると開き、下にスワイプすると折りたためます。ボタンを押しても操作できます。"
 }

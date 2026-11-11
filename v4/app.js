@@ -206,6 +206,15 @@ function goView(target, animate = true) {
 // Fit screen-space points so they stay clear of the top card and the bottom sheet.
 function fitScreen(points, padPx = 40, minSpan = 60) {
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const sideMap = typeof RouteSheet !== 'undefined' ? RouteSheet.mapViewport() : null;
+  if (sideMap) {
+    const W = svg.clientWidth;
+    const m = Math.max((Math.max(...xs) - Math.min(...xs) || 60) / Math.max(120, sideMap.right - sideMap.left - padPx),
+      (Math.max(...ys) - Math.min(...ys) || 60) / Math.max(100, sideMap.bottom - sideMap.top - padPx), minSpan / W);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    goView({ w: Math.min(1600, m * W), x: cx - (sideMap.left + sideMap.right) / 2 * m, y: cy - (sideMap.top + sideMap.bottom) / 2 * m });
+    return;
+  }
   const topBar = document.querySelector('.top'), languageBar = document.querySelector('.language-bar');
   const top = Math.max(70, topBar?.getBoundingClientRect().bottom || 0, languageBar?.getBoundingClientRect().bottom || 0) + 12;
   const bottom = visibleSheetHeight() + 20;
@@ -383,7 +392,9 @@ function draw() {
   svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
   if (phase === 'indoor') {
     if (baseShown !== 'indoor') { $('base').innerHTML = ''; baseShown = 'indoor'; }
-    $('over').innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep);
+    const sideMap = typeof RouteSheet !== 'undefined' ? RouteSheet.mapViewport() : null;
+    const labelBounds = { left: view.x + (sideMap?.left ?? 12) * k, right: view.x + (sideMap?.right ?? svg.clientWidth - 68) * k };
+    $('over').innerHTML = `<rect x="${view.x}" y="${view.y}" width="${view.w}" height="${h}" fill="var(--ground)"/>` + Indoor.drawIso(k, plan, inStep, labelBounds);
     return;
   }
   if (baseShown !== 'outdoor') { $('base').innerHTML = BASE3D; baseShown = 'outdoor'; xrayFor = undefined; }
@@ -499,10 +510,12 @@ let target = null, phase = 'outdoor', plan = null, inStep = 0, indoorFrom = null
 const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-inside', 's-indoor'];
 function sheet(id) {
   for (const s of SHEETS) $(s).hidden = s !== id;
+  if (typeof RouteSheet !== 'undefined') RouteSheet.sync();
   placeFabs();
 }
 function placeFabs() {
-  $('fabs').style.bottom = (visibleSheetHeight() + 12) + 'px';
+  const sideMap = typeof RouteSheet !== 'undefined' ? RouteSheet.mapViewport() : null;
+  $('fabs').style.bottom = (sideMap ? 32 : visibleSheetHeight() + 12) + 'px';
 }
 $('fabs').addEventListener('transitionend', event => {
   if (event.propertyName === 'bottom' && phase !== 'indoor') draw();
@@ -1012,6 +1025,7 @@ function showIndoor() {
   $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
   $('in-prev').disabled = inStep === 0;
   $('in-next').textContent = inStep === plan.steps.length - 1 ? t('app.home') : t('app.next');
+  if (typeof RouteSheet !== 'undefined') RouteSheet.onStep(st, inStep);
   placeFabs();
   fitScreen(Indoor.viewBounds(plan, inStep), 24, 80);
 }

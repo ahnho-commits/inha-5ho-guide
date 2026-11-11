@@ -2,62 +2,62 @@
   "status": "pass",
   "locales": {
     "ko": {
-      "required_codepoints": 469,
+      "required_codepoints": 475,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
     "en": {
-      "required_codepoints": 126,
+      "required_codepoints": 127,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
     "zh-Hans": {
-      "required_codepoints": 540,
+      "required_codepoints": 546,
       "cjk_region": "sc",
       "missing_codepoints": []
     },
     "vi": {
-      "required_codepoints": 182,
+      "required_codepoints": 183,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
     "ru": {
-      "required_codepoints": 169,
-      "cjk_region": "kr",
-      "missing_codepoints": []
-    },
-    "uz": {
-      "required_codepoints": 126,
-      "cjk_region": "kr",
-      "missing_codepoints": []
-    },
-    "mn": {
       "required_codepoints": 170,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
+    "uz": {
+      "required_codepoints": 127,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "mn": {
+      "required_codepoints": 171,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
     "ja": {
-      "required_codepoints": 499,
+      "required_codepoints": 507,
       "cjk_region": "jp",
       "missing_codepoints": []
     },
     "zh-Hant": {
-      "required_codepoints": 543,
+      "required_codepoints": 549,
       "cjk_region": "tc",
       "missing_codepoints": []
     },
     "id": {
-      "required_codepoints": 125,
+      "required_codepoints": 126,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
     "ms": {
-      "required_codepoints": 125,
+      "required_codepoints": 126,
       "cjk_region": "kr",
       "missing_codepoints": []
     }
   },
-  "total_asset_bytes": 1046752,
+  "total_asset_bytes": 1059868,
   "source_commits": {
     "noto-cjk": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
     "noto-fonts": "ffebf8c1ee449e544955a7e813c54f9b73848eac"
@@ -156,37 +156,37 @@
       "file": "guide-cjk-kr-regular.woff2",
       "family": "Guide CJK KR",
       "style": "Regular",
-      "bytes": 36384,
-      "sha256": "8b0244403152f37472a1360fd113aec729a88c9656dbce655268a14b54d7e7b2",
+      "bytes": 36920,
+      "sha256": "a8a84407e4f07bdecf072b0b353c77ddb171906b8fd62b6ce88cd33ec9720d58",
       "source": "NotoSansCJKkr-Regular.otf",
-      "codepoints": 349
+      "codepoints": 355
     },
     {
       "file": "guide-cjk-sc-regular.woff2",
       "family": "Guide CJK SC",
       "style": "Regular",
-      "bytes": 129108,
-      "sha256": "8893794b1bd36b3248945a22f7ab5cd33aaa7b35bf8ad849f392c9d8214b8f0e",
+      "bytes": 130472,
+      "sha256": "794f8b95b1b1d8d9318868c542f4945d4949035532ee07e31030d1478333967a",
       "source": "NotoSansCJKsc-Regular.otf",
-      "codepoints": 436
+      "codepoints": 442
     },
     {
       "file": "guide-cjk-tc-regular.woff2",
       "family": "Guide CJK TC",
       "style": "Regular",
-      "bytes": 176576,
-      "sha256": "ed0cc9e88b1558989c9aabbb7d011dc4a3043632b4a7fca117cbcf225774b151",
+      "bytes": 179244,
+      "sha256": "09a4d0f6e5e96bc4224f79a212ee0940fa12f73469b356c28ef80b30e48ca8c0",
       "source": "NotoSansCJKtc-Regular.otf",
-      "codepoints": 441
+      "codepoints": 447
     },
     {
       "file": "guide-cjk-jp-regular.woff2",
       "family": "Guide CJK JP",
       "style": "Regular",
-      "bytes": 148568,
-      "sha256": "12099e96294773d4e596a8e1c176fd9a6330394b7d3495615c251a3a87a00d95",
+      "bytes": 150412,
+      "sha256": "6ab6e8ed44319d2d6a9d67f4f988d8bee07a5c73dfeb627f70634aad5f28f60b",
       "source": "NotoSansCJKjp-Regular.otf",
-      "codepoints": 397
+      "codepoints": 405
     },
     {
       "file": "guide-sans-bold.woff2",
@@ -201,37 +201,37 @@
       "file": "guide-cjk-kr-bold.woff2",
       "family": "Guide CJK KR",
       "style": "Bold",
-      "bytes": 36964,
-      "sha256": "4d70c7722d1fbd093b8a279c22136b9a815a189df787e50c86aff39a66b2c840",
+      "bytes": 37496,
+      "sha256": "e2141cdeceb05bea791746dd6da055b57b4656c77786ba55e6755ee8f757a77c",
       "source": "NotoSansCJKkr-Bold.otf",
-      "codepoints": 349
+      "codepoints": 355
     },
     {
       "file": "guide-cjk-sc-bold.woff2",
       "family": "Guide CJK SC",
       "style": "Bold",
-      "bytes": 131956,
-      "sha256": "a54d13b4ffb9fcbd1a816990480cfb640183918e289143746e943df9742d3013",
+      "bytes": 133620,
+      "sha256": "268d27cfbc58e0f2bea45c6607855e696c6be21603f76b0eaf7c904c495d086b",
       "source": "NotoSansCJKsc-Bold.otf",
-      "codepoints": 436
+      "codepoints": 442
     },
     {
       "file": "guide-cjk-tc-bold.woff2",
       "family": "Guide CJK TC",
       "style": "Bold",
-      "bytes": 182668,
-      "sha256": "f08c9074652ab3f2ecf5a48de04852cb87065c8f64920dd1622010e5695c7ddc",
+      "bytes": 185248,
+      "sha256": "6b04f6a046c4f07e4e1948c2cd43b8cdfbbca4976239caa2b86de94a0b248fd7",
       "source": "NotoSansCJKtc-Bold.otf",
-      "codepoints": 441
+      "codepoints": 447
     },
     {
       "file": "guide-cjk-jp-bold.woff2",
       "family": "Guide CJK JP",
       "style": "Bold",
-      "bytes": 152280,
-      "sha256": "be9fec8aec4a725ae35f5a4eb2e7d9e744dc4c322255e84c387b4b783175a668",
+      "bytes": 154208,
+      "sha256": "0a3ff88ae704a68f8a89ebbfe47c0fccca06b2b5ae37ece06d5f42c7a92f2806",
       "source": "NotoSansCJKjp-Bold.otf",
-      "codepoints": 397
+      "codepoints": 405
     },
     {
       "file": "guide-symbols.woff2",
@@ -244,17 +244,17 @@
     }
   ],
   "catalog_sha256": {
-    "ko": "112d4e0f5e069670529d3861972b1ace3d6ae281ca27e1d053eb84e7ac98e7cc",
-    "en": "af85a0f9d8b050324789cf86dd64771192c0c2452f0bf1cb12b55d8d8e42525f",
-    "zh-Hans": "44411ef9847dd0e6704e6e78a59eb9a2e06d9709f3b485785ff43865917baa8f",
-    "vi": "46ac569edee25c993407a425cd827e5fecd1465b05546cee94f87abaa569ffab",
-    "ru": "a12d69558725d0c6f0207baf3b4e8f12091bc6a400a5e7188e2846b3d6e97ad2",
-    "uz": "e919a7e035b14a07260b400374ef42679062369f00aa938f1ffb8ef05d7aef54",
-    "mn": "a635a1aff989f9accc04b0d933c4ec11ee47e4d53cc7106f6326f9818de76c0b",
-    "ja": "15e10dc09da7ce5a003e320183f32a6c018b2854a51474acccab40a6d68e5932",
-    "zh-Hant": "da6f5d63ffd706da6af5bf29c0d8ea010f644ac7d529766d974db378f0f48b70",
-    "id": "f3d0e406111e0d0ceeac88b1311b14dd1adbf638756f2b507e88748f77140044",
-    "ms": "9e8b9d3b047f445912e1e33277bfbcc8cbbb76df4caa6254f6f943f15b8529a4"
+    "ko": "e2fe19047332644c9c4372da726e356b61ee0ba6bad2a38dfe744b8373a97a73",
+    "en": "616b7b104fee332c1dc9802ed0819670f3974f43d41d04428665601fbb1bd457",
+    "zh-Hans": "21dcb1e98265ab1de41a20686c6737537e12b2ef5f548077b3cc7193df58a4bb",
+    "vi": "61b4fd612ca904a6d8cb8608f231cd10099b661bd94bc698a127e9ee0a824a10",
+    "ru": "16d68fb3869376f6f5472d3f47e950a05321500a096df06cf11339c4628d189a",
+    "uz": "9f98bd94866237d1ee85569a096d986e1f9bde385fa51c5e0cfb4e8ff0d42348",
+    "mn": "502dcb9cfbbf0282f044091588ec0813bebe58bbd7b766a1fe4eea4f5e145615",
+    "ja": "e37a48e22d0e0b0717e12c692dae00a88cc266e8b17f805dedc5ab6f78ed4e81",
+    "zh-Hant": "3df6a2046c57395c36c1b5a73f3174af6a72c6cc8ec8b5a911dc225ded7a4915",
+    "id": "1d08d5028ee8e02ff234553ac3a8c6fd6e7bd7d96e8003ccc0a8fdfac82469ce",
+    "ms": "fcde941f1a73aa9d57e90770bca136551e8edd4fc353dd70fda7a84229a715cc"
   },
   "build_tools": {
     "fontTools": "4.68.0",

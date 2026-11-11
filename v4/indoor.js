@@ -369,7 +369,7 @@ const Indoor = (() => {
       + `<text x="${lx + 3 * k}" y="${ly + 14 * k}" font-size="${11 * k}" font-weight="800" fill="var(--route)">EV</text></g>`;
   }
 
-  function drawIso(k, plan, stepIdx) {
+  function drawIso(k, plan, stepIdx, bounds = null) {
     const cur = plan.steps[stepIdx];
     const floors = [...new Set([1, 2, 3, 4, 5, ...plan.path.map(id => node(id).f)])].sort((a, b) => a - b);
     const top = Math.max(cur.f, cur.from ?? -1);
@@ -484,15 +484,29 @@ const Indoor = (() => {
       s += `<path d="${line(run)}" fill="none" stroke="var(--route)" stroke-width="${7 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
     const tag = (id, text, fill) => {
-      const [x, y] = at(id), w = (textWidth(text, 12, 700) + 16) * k, h = 22 * k;
-      return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
+      const [x, y] = at(id);
+      const bounded = bounds && Number.isFinite(bounds.left) && Number.isFinite(bounds.right) && bounds.right - bounds.left > 16 * k;
+      const lines = bounded ? mapLabelLines(text, (bounds.right - bounds.left) / k - 16, 12, 700) : [text];
+      const w = (Math.max(...lines.map(line => textWidth(line, 12, 700))) + 16) * k;
+      const h = (22 + (lines.length - 1) * 15) * k;
+      // Only the caption moves to fit the viewport; the pin stays at the actual node.
+      const left = bounded ? Math.max(bounds.left, Math.min(x - w / 2, bounds.right - w)) : x - w / 2;
+      const dx = left + w / 2 - x;
+      const edgeX = Math.max(left - x, Math.min(0, left + w - x));
+      const leader = Math.abs(dx) > .01 * k ? `<path d="M0 ${-4.5 * k}L${edgeX} ${-7 * k}" fill="none" stroke="${fill}" stroke-width="${1.5 * k}"/>` : '';
+      const caption = lines.map((line, i) => `<tspan x="${dx}" dy="${i ? 15 * k : 0}">${svgText(line)}${i < lines.length - 1 ? ' ' : ''}</tspan>`).join('');
+      return {
+        svg: `<g transform="translate(${x} ${y})" role="img" aria-label="${svgText(text).replace(/"/g, '&quot;')}">${leader}<rect x="${left - x}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${11 * k}" fill="${fill}"/><text x="${dx}" y="${-h + 8.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${caption}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`,
+        box: [left - 2 * k, y - h - 9 * k, left + w + 2 * k, y - 5 * k],
+        pinBox: [x - 6 * k, y - 6 * k, x + 6 * k, y + 6 * k],
+      };
     };
     const tags = [[end, node(end).kind === 'room' ? doorNo(node(end)) : label(end), 'var(--dest)']];
     if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) tags.unshift([start, node(start).kind === 'entrance' ? t('nav.entry') : t('nav.start'), 'var(--ink)']);
     for (const [id, text, fill] of tags) {
-      s += tag(id, text, fill);
-      const [x, y] = at(id), w = (textWidth(text, 12, 700) + 16) * k;
-      if (node(id).f === cur.f) taken.push([x - w / 2, y - 29 * k, x + w / 2, y + 3 * k]);
+      const rendered = tag(id, text, fill);
+      s += rendered.svg;
+      if (node(id).f === cur.f) taken.push(rendered.box, rendered.pinBox);
     }
     // Rooms to look for whose number didn't fit on their block: blue for "you're on track", grey for "wrong way".
     // A tag goes below, above, right or left of the room, or is left out (the card still lists every room).

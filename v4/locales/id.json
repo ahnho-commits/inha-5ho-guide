@@ -292,5 +292,11 @@
   "photo.open_label": "Perbesar {n} foto lokasi",
   "ui.privacy_title": "Privasi dan log akses",
   "ui.privacy_body": "Aplikasi ini tidak mengirim nomor ruangan yang Anda masukkan, rute yang dihitung, atau koordinat lokasi perangkat kepada pengelola situs, dan tidak menyimpan data tersebut. Aplikasi ini juga tidak menggunakan alat analitik atau pelacak iklan. GitHub Pages, yang menyediakan halaman dan berkas foto, mencatat alamat IP pengunjung untuk tujuan keamanan. Jika Anda mengizinkan akses lokasi, layanan lokasi browser atau sistem operasi dapat memproses informasi secara terpisah. Anda juga dapat menggunakan panduan ini tanpa fitur lokasi dengan memilih titik awal secara manual.",
-  "ui.privacy_policy": "Informasi pengumpulan data GitHub"
+  "ui.privacy_policy": "Informasi pengumpulan data GitHub",
+  "ui.route_more": "Lainnya",
+  "ui.route_photo_expand": "Perbesar foto",
+  "ui.route_photo_collapse": "Perkecil foto",
+  "ui.route_details": "Lihat rincian",
+  "ui.route_hide_details": "Tutup rincian",
+  "ui.photo_swipe_hint": "Geser ke atas untuk memperbesar atau ke bawah untuk memperkecil. Anda juga dapat mengetuk tombol."
 }
