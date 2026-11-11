@@ -9,10 +9,10 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const project = (lat, lon) => [(lon - C.origin[1]) * C.kx, -(lat - C.origin[0]) * C.ky];
 
 const STARTS = {
-  station: { title: '인하대역', sub: '4번 출구 · 운동장 남쪽·동쪽으로 돌아가는 길' },
-  main: { title: '정문', sub: '' },
-  back: { title: '후문', sub: '' },
-  side: { title: '쪽문', sub: '60주년기념관 옆 작은 문' },
+  station: { get title() { return localName('인하대역'); }, get sub() { return t('app.start.station_sub'); } },
+  main: { get title() { return localName('정문'); }, sub: '' },
+  back: { get title() { return localName('후문'); }, sub: '' },
+  side: { get title() { return localName('쪽문'); }, get sub() { return t('app.start.side_sub'); } },
 };
 const WALK = 1.2;          // m/s, for the minutes estimate
 const ARRIVE_M = 12;
@@ -120,7 +120,8 @@ function buildRoute(from, destKey, startName) {
   });
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + dist(pts[i - 1], pts[i]));
-  const r = { pts, segKind, cum, total: cum[cum.length - 1], dest: destKey, destName: dest.name, startName, from };
+  const r = { pts, segKind, cum, total: cum[cum.length - 1], dest: destKey, destName: localName(dest.name),
+    startRaw: startName, startName: startName ? localName(startName) : t('app.position_now'), from };
   r.steps = buildSteps(r);
   return r;
 }
@@ -154,18 +155,17 @@ function buildSteps(r) {
     if (last && s - last.at < 15) { if (Math.abs(d) > Math.abs(last.turn)) { last.at = s; last.turn = d; last.p = r.pts[i]; } continue; }
     turns.push({ at: s, turn: d, p: r.pts[i] });
   }
-  const steps = [{ at: 0, dir: 'start', text: `${r.startName}에서 출발` }];
-  for (const t of turns) {
-    const dir = t.turn > 0 ? (t.turn < 60 ? 'slight-right' : 'right') : (t.turn > -60 ? 'slight-left' : 'left');
-    const word = { right: '오른쪽으로', 'slight-right': '살짝 오른쪽으로', left: '왼쪽으로', 'slight-left': '살짝 왼쪽으로' }[dir];
+  const steps = [{ at: 0, dir: 'start', text: t('app.depart', { place: r.startName }) }];
+  for (const turnInfo of turns) {
+    const dir = turnInfo.turn > 0 ? (turnInfo.turn < 60 ? 'slight-right' : 'right') : (turnInfo.turn > -60 ? 'slight-left' : 'left');
     // The place you just left is no help as a landmark ("후문 앞에서" right after leaving 후문).
-    const lm = LANDMARKS.filter(l => dist(l.p, t.p) < 60 && dist(l.p, r.from) > 40).sort((a, b) => dist(a.p, t.p) - dist(b.p, t.p))[0];
-    const next = kindAt(r, t.at + 1);
-    let text = `${lm ? lm.name + ' 앞에서 ' : ''}${word} 가세요`;
-    if (next === 1) text = `운동장 바깥쪽 길을 따라 ${word}`;
-    steps.push({ at: t.at, dir, text, p: t.p });
+    const lm = LANDMARKS.filter(l => dist(l.p, turnInfo.p) < 60 && dist(l.p, r.from) > 40).sort((a, b) => dist(a.p, turnInfo.p) - dist(b.p, turnInfo.p))[0];
+    const next = kindAt(r, turnInfo.at + 1);
+    const key = 'app.turn.' + dir.replace('-', '_') + (next === 1 ? '_field' : lm ? '_at' : '');
+    const text = t(key, { place: lm ? localName(lm.name) : '' });
+    steps.push({ at: turnInfo.at, dir, text, p: turnInfo.p });
   }
-  steps.push({ at: r.total, dir: 'arrive', text: `${r.destName} 도착`, p: r.pts[r.pts.length - 1] });
+  steps.push({ at: r.total, dir: 'arrive', text: t('app.arrival', { place: r.destName }), p: r.pts[r.pts.length - 1] });
   if (steps[1] && dist(r.from, C.pois['start:side'].p) < 30) steps[1].photo = 'gate';
   // Flag a step when the walk leading up to it uses a path we added from the user's description.
   steps.forEach((st, i) => { if (i) st.guess = r.segKind.some((k, j) => k === 2 && r.cum[j] < st.at && r.cum[j + 1] > steps[i - 1].at); });
@@ -206,7 +206,9 @@ function goView(target, animate = true) {
 // Fit screen-space points so they stay clear of the top card and the bottom sheet.
 function fitScreen(points, padPx = 40, minSpan = 60) {
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
-  const top = $('instr').hidden ? 70 : 190, bottom = visibleSheetHeight() + 20;
+  const topBar = document.querySelector('.top'), languageBar = document.querySelector('.language-bar');
+  const top = Math.max(70, topBar?.getBoundingClientRect().bottom || 0, languageBar?.getBoundingClientRect().bottom || 0) + 12;
+  const bottom = visibleSheetHeight() + 20;
   const Wpx = svg.clientWidth, Hpx = svg.clientHeight;
   const spanX = Math.max(...xs) - Math.min(...xs) || 60, spanY = Math.max(...ys) - Math.min(...ys) || 60;
   const usableW = Wpx - padPx * 2, usableH = Math.max(120, Hpx - top - bottom - padPx);
@@ -301,9 +303,78 @@ let route = null, me = null, heading = null, focusStep = null;
 let progress = 0;
 let baseShown = null;
 
-function pill(p, z, text, fill, k) {
-  const [x, y] = S(p, z), fs = 13 * k, w = (text.length * 13 + 20) * k, h = 26 * k;
-  return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 9 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-9 * k - h / 2 + fs * .36}" font-size="${fs}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.8 * k}"/></g>`;
+function mapLabelLines(text, maxWidth, fontSize, weight) {
+  const words = String(text).split(/\s+/), lines = [];
+  let line = '';
+  const segments = word => typeof Intl.Segmenter === 'function'
+    ? [...new Intl.Segmenter(LANG, { granularity: 'grapheme' }).segment(word)].map(part => part.segment) : [...word];
+  for (const word of words) {
+    const next = line ? line + ' ' + word : word;
+    if (textWidth(next, fontSize, weight) <= maxWidth) { line = next; continue; }
+    if (line) { lines.push(line); line = ''; }
+    for (const glyph of segments(word)) {
+      if (line && textWidth(line + glyph, fontSize, weight) > maxWidth) { lines.push(line); line = ''; }
+      line += glyph;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+const svgText = value => String(value).replace(/[&<>]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
+function mapLabelArea(k) {
+  const mapTop = svg.getBoundingClientRect().top;
+  const top = Math.max(document.querySelector('.top')?.getBoundingClientRect().bottom || 0,
+    document.querySelector('.language-bar')?.getBoundingClientRect().bottom || 0) - mapTop + 6;
+  const sheets = [...document.querySelectorAll('.sheet')].filter(el => !el.hidden)
+    .map(el => el.getBoundingClientRect().top - mapTop).filter(y => y > top);
+  const bottom = Math.min(svg.clientHeight, ...sheets) - 6;
+  return { left: view.x + 8 * k, right: view.x + view.w - 8 * k,
+    top: view.y + top * k, bottom: view.y + Math.max(top + 35, bottom) * k };
+}
+function labelOverlap(a, b, gap = 0) {
+  return Math.max(0, Math.min(a.x + a.w + gap, b.x + b.w) - Math.max(a.x - gap, b.x))
+    * Math.max(0, Math.min(a.y + a.h + gap, b.y + b.h) - Math.max(a.y - gap, b.y));
+}
+function mapUiObstacles(k) {
+  const mapRect = svg.getBoundingClientRect();
+  return ['zoom-in', 'zoom-out', 'recenter', 'compass'].map(id => $(id)).filter(el => !el.hidden)
+    .map(el => el.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0)
+    .map(rect => ({ x: view.x + (rect.left - mapRect.left) * k, y: view.y + (rect.top - mapRect.top) * k,
+      w: rect.width * k, h: rect.height * k, ui: true }));
+}
+function pill(p, z, text, fill, k, occupied = [], area = mapLabelArea(k), fullText = text, required = false) {
+  const [x, y] = S(p, z), fs = 13 * k;
+  const lines = mapLabelLines(text, Math.max(80, Math.min(200, svg.clientWidth - 44)), 13, 700);
+  const w = (Math.max(...lines.map(line => textWidth(line, 13, 700))) + 20) * k, h = (lines.length * 17 + 9) * k;
+  const marker = `<circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.8 * k}"/>`;
+  // A pin below the sheet must not leave a detached, half-covered label above it.
+  if (y > area.bottom) return `<g transform="translate(${x} ${y})"><title>${svgText(fullText)}</title>${marker}</g>`;
+  const naturalBox = { x: x - w / 2, y: y - h - 9 * k, w, h };
+  const visible = (x >= area.left && x <= area.right && y >= area.top && y <= area.bottom)
+    || labelOverlap(naturalBox, { x: area.left, y: area.top, w: area.right - area.left, h: area.bottom - area.top }) > 0;
+  const offsets = visible ? [[0, -h - 9 * k], [0, 9 * k], [w / 2 + 12 * k, -h / 2], [-w / 2 - 12 * k, -h / 2], [0, -h - 44 * k], [0, 44 * k]] : [[0, -h - 9 * k]];
+  if (visible) for (const obstacle of occupied.filter(box => box.ui)) {
+    offsets.push([obstacle.x - w / 2 - 6 * k - x, -h - 9 * k],
+      [obstacle.x + obstacle.w + w / 2 + 6 * k - x, -h - 9 * k],
+      [0, obstacle.y - h - 6 * k - y], [0, obstacle.y + obstacle.h + 6 * k - y]);
+  }
+  const choices = offsets.map(([dx, dy], i) => {
+    const box = { x: x + dx - w / 2, y: y + dy, w, h };
+    if (visible || (x >= view.x && x <= view.x + view.w)) box.x = Math.max(area.left, Math.min(area.right - w, box.x));
+    if (visible) {
+      box.y = Math.max(area.top, Math.min(area.bottom - h, box.y));
+    }
+    const overlap = occupied.reduce((sum, other) => sum + labelOverlap(box, other, 4 * k), 0);
+    return { box, overlap, score: overlap + i * k * k };
+  });
+  const free = choices.find(item => item.overlap === 0);
+  if (visible && !free && !required) return `<g transform="translate(${x} ${y})"><title>${svgText(fullText)}</title>${marker}</g>`;
+  const box = (free || choices.reduce((best, item) => item.score < best.score ? item : best)).box;
+  if (visible) occupied.push(box);
+  const dx = box.x + w / 2 - x, dy = box.y - y, textY = dy + 17 * k;
+  const connector = visible && (Math.abs(dx) > k || Math.abs(dy + h + 9 * k) > k)
+    ? `<path d="M0 0L${dx} ${dy + h / 2}" fill="none" stroke="${fill}" stroke-width="${1.5 * k}"/>` : '';
+  return `<g transform="translate(${x} ${y})"><title>${svgText(fullText)}</title>${connector}<rect x="${dx - w / 2}" y="${dy}" width="${w}" height="${h}" rx="${Math.min(13 * k, h / 2)}" fill="${fill}"/><text font-size="${fs}" font-weight="700" fill="#fff" text-anchor="middle">${lines.map((line, i) => `<tspan x="${dx}" y="${textY + i * 17 * k}">${svgText(line)}</tspan>`).join('')}</text>${marker}</g>`;
 }
 const LIFT = .4;   // draw the route a hair above the ground
 
@@ -318,6 +389,7 @@ function draw() {
   if (baseShown !== 'outdoor') { $('base').innerHTML = BASE3D; baseShown = 'outdoor'; xrayFor = undefined; }
   applyXray();
   let s = '';
+  const labelBoxes = mapUiObstacles(k), labelArea = mapLabelArea(k);
   if (route) {
     const doneTo = Math.min(progress, route.total), done = [], rest = [];
     route.pts.forEach((p, i) => (route.cum[i] <= doneTo ? done : rest).push(p));
@@ -334,17 +406,29 @@ function draw() {
       s += `<ellipse cx="${fx}" cy="${fy}" rx="${15 * k}" ry="${9 * k}" fill="none" stroke="var(--dest)" stroke-width="${3 * k}"/>`;
     }
   }
+  // Reserve the destination first; secondary labels can disappear at dense zoom levels.
+  const destKey = route ? route.dest : selectedDest, d = C.pois['dest:' + destKey];
+  const wingCode = { corner: '5E·5N', east: '5E', south: '5S' }[destKey];
+  const destinationLabel = wingCode ? `${wingCode} · ${t('nav.entry')}` : localName(d.name);
+  s += pill(d.p, 0, destinationLabel, 'var(--dest)', k, labelBoxes, labelArea, localName(d.name), true);
+  const starts = Object.entries(C.pois).filter(([key]) => key.startsWith('start:'));
+  starts.sort(([a], [b]) => Number(b === 'start:' + route?.manualStartKey) - Number(a === 'start:' + route?.manualStartKey));
+  for (const [key, v] of starts) {
+    s += pill(v.p, 0, localName(key === 'start:station' ? '인하대역' : v.name), 'var(--ink)', k, labelBoxes, labelArea);
+  }
   for (const l of LANDMARKS.filter(l => C.buildings.some(b => b.name === l.name && (b.main || l.name !== '5호관')))) {
     const b = C.buildings.find(b => b.name === l.name && (b.main || l.name !== '5호관'));
     const [x, y] = S(l.p, Math.min(MAX_H, (b.lv || 3) * 3.4));
     const big = b.main;
-    s += `<text class="lbl" x="${x}" y="${y}" font-size="${(big ? 16 : 12) * k}" font-weight="${big ? 800 : 600}" fill="${big ? 'var(--dest)' : 'var(--muted)'}" stroke-width="${3.5 * k}" text-anchor="middle">${l.name}</text>`;
+    const fontSize = big ? 16 : 12, weight = big ? 800 : 600;
+    const lines = mapLabelLines(localName(l.name), Math.min(180, svg.clientWidth - 40), fontSize, weight);
+    const width = Math.max(...lines.map(line => textWidth(line, fontSize, weight))) * k;
+    const box = { x: x - width / 2, y: y - (lines.length - 1) / 2 * (fontSize + 3) * k - fontSize * k,
+      w: width, h: lines.length * (fontSize + 3) * k };
+    if (box.y < labelArea.top || box.y + box.h > labelArea.bottom || labelBoxes.some(other => labelOverlap(box, other, 4 * k) > 0)) continue;
+    labelBoxes.push(box);
+    s += `<text class="lbl" font-size="${fontSize * k}" font-weight="${weight}" fill="${big ? 'var(--dest)' : 'var(--muted)'}" stroke-width="${3.5 * k}" text-anchor="middle">${lines.map((line, i) => `<tspan x="${x}" y="${y + (i - (lines.length - 1) / 2) * (fontSize + 3) * k}">${svgText(line)}</tspan>`).join('')}</text>`;
   }
-  for (const [key, v] of Object.entries(C.pois)) {
-    if (key.startsWith('start:')) s += pill(v.p, 0, key === 'start:station' ? '인하대역' : v.name, 'var(--ink)', k);
-  }
-  const d = C.pois['dest:' + (route ? route.dest : selectedDest)];
-  s += pill(d.p, 0, d.name.replace(' 주출입구', ''), 'var(--dest)', k);
   if (me) {
     const [mx, my] = S(me.p), r = Math.max(me.acc, 3 * k);
     s += `<ellipse cx="${mx}" cy="${my}" rx="${r * 1.2247}" ry="${r * .7071}" fill="var(--me)" fill-opacity=".14" stroke="var(--me)" stroke-opacity=".35" stroke-width="${k}"/>`;
@@ -420,11 +504,22 @@ function sheet(id) {
 function placeFabs() {
   $('fabs').style.bottom = (visibleSheetHeight() + 12) + 'px';
 }
+$('fabs').addEventListener('transitionend', event => {
+  if (event.propertyName === 'bottom' && phase !== 'indoor') draw();
+});
+let bannerMessage = null;
+const displayMessage = message => typeof message === 'function' ? message() : message || '';
 function banner(text, btn, onBtn) {
+  bannerMessage = { text, btn, onBtn };
+  renderBanner();
+}
+function renderBanner() {
+  if (!bannerMessage) return;
+  const { text, btn, onBtn } = bannerMessage;
   $('banner').hidden = !text;
-  $('banner-text').textContent = text || '';
+  $('banner-text').textContent = displayMessage(text);
   $('banner-btn').hidden = !btn;
-  $('banner-btn').textContent = btn || '';
+  $('banner-btn').textContent = displayMessage(btn);
   $('banner-btn').onclick = onBtn || null;
 }
 
@@ -442,14 +537,8 @@ const ICONS = {
 };
 const iconSvg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ICONS.straight}</svg>`;
 // Real photos for the steps where one helps. Small in the card, full screen on tap.
-const PHOTOS = {
-  gate: '쪽문을 지나 60주년기념관과 5호관 사이 길로 들어서는 모습',
-  door: '5동과 5북 사이 모서리의 유리 자동문 입구',
-  lobby: '모서리 입구로 들어오면 보이는 1층 엘리베이터와 안내판',
-  bnorth: '5동·5북 사이 계단으로 내려온 5동 지하 복도',
-  bsouth: '5동·5남 사이 계단으로 내려온 5동 지하 동아리방 복도',
-  towersign: '5동탑 층별 동아리 안내판',
-};
+const PHOTOS = Object.defineProperties({}, Object.fromEntries(['gate', 'door', 'lobby', 'bnorth', 'bsouth', 'towersign']
+  .map(key => [key, { enumerable: true, get: () => t('app.photo.' + key) }])));
 function setPhoto(key) {
   const b = $('i-photo');
   b.hidden = !key;
@@ -463,7 +552,7 @@ $('i-photo').onclick = () => {
   const v = $('viewer'), key = $('i-photo').dataset.photo;
   v.firstElementChild.src = `../img/${key}.jpg`;
   v.firstElementChild.alt = PHOTOS[key];
-  v.lastElementChild.textContent = `실제 사진 · ${PHOTOS[key]}`;
+  v.lastElementChild.textContent = t('app.real_photo', { caption: PHOTOS[key] });
   v.hidden = false;
 };
 $('viewer').onclick = () => { $('viewer').hidden = true; };
@@ -471,11 +560,11 @@ function showInstr(step, distM) {
   $('instr').hidden = false;
   setPhoto(step.photo);
   $('i-icon').innerHTML = iconSvg(step.dir);
-  $('i-dist').textContent = step.dir === 'arrive' && distM < ARRIVE_M ? '도착' : `${Math.max(0, Math.round(distM / 5) * 5)}m`;
-  $('i-say').textContent = step.text + (step.guess ? ' (경로 확인 중)' : '');
+  $('i-dist').textContent = step.dir === 'arrive' && distM < ARRIVE_M ? t('app.arrived') : `${Math.max(0, Math.round(distM / 5) * 5)}m`;
+  $('i-say').textContent = step.text + (step.guess ? t('app.checking_route') : '');
   const remain = route.total - progress;
-  $('i-to').textContent = `${route.destName}까지 ${Math.round(remain)}m`;
-  $('i-eta').textContent = `도보 ${Math.max(1, Math.ceil(remain / WALK / 60))}분`;
+  $('i-to').textContent = t('app.distance_to', { place: route.destName, distance: Math.round(remain) });
+  $('i-eta').textContent = t('app.walk_minutes', { minutes: Math.max(1, Math.ceil(remain / WALK / 60)) });
 }
 function nextStepFrom(s) {
   return route.steps.find(st => st.at > s + 3) || route.steps[route.steps.length - 1];
@@ -488,7 +577,7 @@ function setTarget(tg) {
   for (const id of ['go-gps', 'go-manual', 'go-inside']) $(id).disabled = !target;
 }
 function renderQuick() {
-  $('quick').innerHTML = [['B1:clubs', t('quick_b1')], ['tower', t('quick_tower') + ' ' + t('quick_tower_sub')]]
+  $('quick').innerHTML = [['B1:clubs', t('quick_b1')], ['B1S:clubs', t('quick_b1_south')], ['tower', t('quick_tower') + ' ' + t('quick_tower_sub')]]
     .map(([id, text]) => `<button class="mini" data-quick="${id}" aria-pressed="${!!target && (target.id === id || (id === 'tower' && target.id.startsWith('T:')))}">${text}</button>`).join('');
   $('tower-floors').innerHTML = TOWER_FLOORS.map(f => `<button class="mini" data-tower="${f}" aria-pressed="${!!target && target.id === 'T:' + f}">${Indoor.label('T:' + f)}</button>`).join('');
 }
@@ -544,6 +633,7 @@ function reset() {
   phase = 'outdoor';
   plan = null;
   stopGPS();
+  stopCompass();
   stopSim();
   route = null; me = null; heading = null; focusStep = null; progress = 0; mode = null;
   $('instr').hidden = true;
@@ -560,24 +650,42 @@ function overview() {
 }
 
 // ---------- GPS ----------
-let watchId = null, offCount = 0, gotFix = false;
+let watchId = null, watchGeneration = 0, offCount = 0, gotFix = false;
+let farMessage = null, deniedMessage = null;
+const outdoorGPSActive = () => mode === 'gps' && phase === 'outdoor';
+function watchGPS() {
+  if (!outdoorGPSActive() || document.hidden || watchId !== null) return;
+  const generation = ++watchGeneration;
+  const current = () => generation === watchGeneration && outdoorGPSActive() && !document.hidden;
+  watchId = navigator.geolocation.watchPosition(
+    pos => { if (current()) onPos(pos); },
+    error => { if (current()) onPosError(error); },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
+}
 function startGPS() {
-  if (!('geolocation' in navigator)) return denied('이 브라우저는 위치 기능을 지원하지 않아요.', []);
+  if (phase !== 'outdoor') return;
+  stopGPS();
+  stopCompass();
+  stopSim();
+  if (!('geolocation' in navigator)) return denied('app.gps.unsupported', []);
   mode = 'gps';
   gotFix = false;
+  offCount = 0;
   sheet('s-nav');
-  banner('위치 찾는 중… 하늘이 보이는 곳에서 더 빨라요');
+  banner(() => t('app.gps.searching'));
   $('compass').hidden = false;
-  watchId = navigator.geolocation.watchPosition(onPos, onPosError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
+  watchGPS();
 }
 function stopGPS() {
+  // clearWatch cannot recall callbacks already queued by the browser.
+  watchGeneration++;
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
 }
 document.addEventListener('visibilitychange', () => {
-  if (mode !== 'gps') return;
   if (document.hidden) stopGPS();
-  else if (watchId === null) watchId = navigator.geolocation.watchPosition(onPos, onPosError, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
+  else watchGPS();
+  syncCompass();
 });
 function onPos(pos) {
   const { latitude, longitude, accuracy } = pos.coords;
@@ -600,15 +708,17 @@ function outsideArea(lat, lon) {
   me = null;
   $('instr').hidden = true;
   if (km <= NEAR_KM) {
-    banner(`인하대까지 약 ${far}예요. 캠퍼스 가까이 오면 자동으로 안내가 시작돼요.`, '출발지 고르기', toManual);
+    banner(() => t('app.gps.near', { distance: far }), () => t('app.manual_start'), toManual);
     fit(Object.values(C.pois).map(v => v.p));
     return;
   }
   stopGPS();
+  stopCompass();
   mode = null;
   banner('');
   $('compass').hidden = true;
-  $('far-dist').textContent = km < 100 ? `지금 위치에서 인하대까지 약 ${far}예요.` : '지금 위치는 인하대에서 100km 넘게 떨어져 있어요.';
+  farMessage = () => km < 100 ? t('app.gps.far', { distance: far }) : t('app.gps.very_far');
+  $('far-dist').textContent = farMessage();
   sheet('s-far');
   fit(Object.values(C.pois).map(v => v.p));
 }
@@ -616,20 +726,29 @@ function onPosError(err) {
   if (err.code === 1) {
     stopGPS();
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    denied('위치 권한이 꺼져 있어요. 다시 켜려면:', ios
-      ? ['주소창 왼쪽 <b>가가</b> → 웹사이트 설정 → 위치 → <b>허용</b>', '그래도 안 되면 설정 → 개인정보 보호 및 보안 → 위치 서비스 → <b>Safari 웹사이트</b>를 "앱을 사용하는 동안"으로', '바꾼 뒤 이 페이지를 새로고침']
-      : ['주소창 왼쪽 아이콘 → <b>권한</b> → 위치 <b>허용</b>', '폰 설정에서 위치가 켜져 있는지 확인', '바꾼 뒤 이 페이지를 새로고침']);
+    denied('app.gps.denied', ios
+      ? ['app.gps.ios_site', 'app.gps.ios_system', 'app.gps.reload']
+      : ['app.gps.android_site', 'app.gps.system_on', 'app.gps.reload']);
   } else if (!gotFix) {
     stopGPS();
-    denied('위치를 찾지 못했어요. 실내이거나 신호가 약할 수 있어요.', ['건물 밖, 하늘이 보이는 곳에서 다시 시도해 보세요', '또는 출발지를 직접 고를 수 있어요']);
+    denied('app.gps.not_found', ['app.gps.try_outside', 'app.gps.manual_alternative']);
   }
 }
 function denied(why, steps) {
+  stopGPS();
+  stopCompass();
   mode = null;
-  $('denied-why').textContent = why;
-  $('denied-steps').innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+  deniedMessage = { why, steps };
+  renderDenied();
   banner('');
   sheet('s-denied');
+}
+function renderDenied() {
+  if (!deniedMessage) return;
+  $('denied-why').textContent = t(deniedMessage.why);
+  $('denied-steps').replaceChildren(...deniedMessage.steps.map(key => {
+    const li = document.createElement('li'); li.textContent = t(key); return li;
+  }));
 }
 
 function inArea(p, margin) {
@@ -641,13 +760,13 @@ function handleFix(p, acc) {
   gotFix = true;
   me = { p, acc };
   if (mode === 'gps') {
-    if (acc > 300) banner(`위치가 많이 부정확해요 (±${Math.round(acc)}m). '정확한 위치'가 꺼져 있을 수 있어요.`, '출발지 고르기', toManual);
-    else if (acc > 50) banner(`위치가 부정확해요 (±${Math.round(acc)}m). 건물에서 떨어지면 나아져요.`);
+    if (acc > 300) banner(() => t('app.gps.very_inaccurate', { accuracy: Math.round(acc) }), () => t('app.manual_start'), toManual);
+    else if (acc > 50) banner(() => t('app.gps.inaccurate', { accuracy: Math.round(acc) }));
     else banner('');
   }
   if (!route) {
     selectedDest = pickEntrance(p);
-    route = buildRoute(p, selectedDest, '지금 위치');
+    route = buildRoute(p, selectedDest, '');
     progress = 0;
     follow = true;
     overview();
@@ -667,10 +786,10 @@ function updateProgress(p, acc) {
   if (best.d > Math.max(OFF_ROUTE_M, acc)) {
     if (++offCount >= 3 && mode !== 'sim') {
       offCount = 0;
-      route = buildRoute(p, selectedDest, '지금 위치');
+      route = buildRoute(p, selectedDest, '');
       progress = 0;
       if (navigator.vibrate) navigator.vibrate(120);
-      banner('경로를 벗어나서 다시 찾았어요');
+      banner(() => t('app.gps.rerouted'));
       setTimeout(() => banner(''), 3000);
       return updateProgress(p, acc);
     }
@@ -690,25 +809,67 @@ function arrive() {
   if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
   // Outside leg done: carry straight on with the floors inside.
   enterIndoor('ENT:' + route.dest);
-  banner(t('arrived_banner', { entrance: C.pois['dest:' + route.dest].name }));
+  banner(() => t('arrived_banner', { entrance: localName(C.pois['dest:' + route.dest].name) }));
   setTimeout(() => banner(''), 4000);
 }
 
 // ---------- compass ----------
+const compassEvent = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+let compassEnabled = false, compassListening = false, compassFrame = 0;
+let compassRequest = 0, compassPending = false, compassDrawAt = -Infinity;
+function drawCompass(now) {
+  compassFrame = 0;
+  if (!compassEnabled || !outdoorGPSActive() || document.hidden) return;
+  // Sensor events can arrive much faster than the whole map needs to redraw.
+  if (now - compassDrawAt < 100) { compassFrame = requestAnimationFrame(drawCompass); return; }
+  compassDrawAt = now;
+  draw();
+}
+function onCompassTurn(event) {
+  if (!compassEnabled || !outdoorGPSActive() || document.hidden) return;
+  const h = event.webkitCompassHeading ?? (event.absolute && event.alpha !== null ? 360 - event.alpha : null);
+  if (!Number.isFinite(h)) return;
+  heading = (h % 360 + 360) % 360;
+  if (!compassFrame) compassFrame = requestAnimationFrame(drawCompass);
+}
+function syncCompass() {
+  const listen = compassEnabled && outdoorGPSActive() && !document.hidden;
+  if (listen && !compassListening) window.addEventListener(compassEvent, onCompassTurn);
+  else if (!listen && compassListening) window.removeEventListener(compassEvent, onCompassTurn);
+  compassListening = listen;
+  if (!listen) {
+    cancelAnimationFrame(compassFrame);
+    compassFrame = 0;
+    compassDrawAt = -Infinity;
+  }
+}
+function stopCompass() {
+  compassRequest++;
+  compassPending = false;
+  compassEnabled = false;
+  heading = null;
+  syncCompass();
+  $('compass').hidden = true;
+}
 async function enableCompass() {
+  if (!outdoorGPSActive() || compassEnabled || compassPending) return;
+  const request = ++compassRequest;
+  compassPending = true;
   try {
     if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
-      if (await DeviceOrientationEvent.requestPermission() !== 'granted') return banner('방향 표시 권한이 없어서 지도만 보여드려요.');
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (request !== compassRequest || !outdoorGPSActive()) return;
+      if (permission !== 'granted') return banner(() => t('app.compass.denied'));
     }
-  } catch { return banner('방향 표시를 켤 수 없어요. 지도는 그대로 쓸 수 있어요.'); }
-  const onTurn = e => {
-    const h = e.webkitCompassHeading ?? (e.absolute && e.alpha !== null ? 360 - e.alpha : null);
-    if (h === null) return;
-    heading = h;
-    draw();
-  };
-  window.addEventListener('ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation', onTurn);
-  $('compass').hidden = true;
+    if (request !== compassRequest || !outdoorGPSActive()) return;
+    compassEnabled = true;
+    syncCompass();
+    $('compass').hidden = true;
+  } catch {
+    if (request === compassRequest && outdoorGPSActive()) banner(() => t('app.compass.unavailable'));
+  } finally {
+    if (request === compassRequest) compassPending = false;
+  }
 }
 $('compass').onclick = enableCompass;
 
@@ -716,6 +877,8 @@ $('compass').onclick = enableCompass;
 let stepIdx = 0, simTimer = null;
 function toManual() {
   stopGPS();
+  stopCompass();
+  stopSim();
   mode = 'manual';
   me = null;
   route = null;
@@ -729,13 +892,19 @@ function startManual(key) {
   const start = C.pois['start:' + key];
   selectedDest = pickEntrance(start.p);
   route = buildRoute(start.p, selectedDest, start.name);
+  route.manualStartKey = key;
   progress = 0;
   stepIdx = 0;
   focusStep = null;
-  $('route-title').textContent = `${STARTS[key].title} → ${route.destName}`;
-  $('route-sub').textContent = `약 ${Math.round(route.total / 10) * 10}m · 도보 ${Math.max(1, Math.ceil(route.total / WALK / 60))}분 · 안내 ${route.steps.length - 1}번`;
+  renderRouteSummary();
   sheet('s-route');
   showManualStep();
+}
+function renderRouteSummary() {
+  if (!route) return;
+  $('route-title').textContent = `${route.manualStartKey ? STARTS[route.manualStartKey].title : route.startName} → ${route.destName}`;
+  $('route-sub').textContent = t('app.route_summary', { distance: Math.round(route.total / 10) * 10,
+    minutes: Math.max(1, Math.ceil(route.total / WALK / 60)), steps: route.steps.length - 1 });
 }
 function showManualStep() {
   const st = route.steps[Math.min(stepIdx + 1, route.steps.length - 1)];
@@ -744,7 +913,7 @@ function showManualStep() {
   focusStep = st;
   showInstr(st, st.at - from.at);
   $('prev-step').disabled = stepIdx === 0;
-  $('next-step').textContent = stepIdx >= route.steps.length - 2 ? t('indoor_go') : '다음 안내';
+  $('next-step').textContent = stepIdx >= route.steps.length - 2 ? t('indoor_go') : t('app.next_instruction');
   const seg = route.pts.filter((_, i) => route.cum[i] >= from.at - 1 && route.cum[i] <= st.at + 1);
   fit([pointAt(route, from.at), ...seg, pointAt(route, st.at)], 50, 200);
 }
@@ -757,6 +926,9 @@ $('next-step').onclick = () => {
 $('prev-step').onclick = () => { if (stepIdx > 0) { stepIdx--; showManualStep(); } };
 
 function startSim() {
+  stopGPS();
+  stopCompass();
+  stopSim();
   mode = 'sim';
   focusStep = null;
   progress = 0;
@@ -780,6 +952,10 @@ $('simulate').onclick = startSim;
 const CENTRAL = { S: '5남 중앙 계단', E: '5동 중앙 계단', N: '5북 동쪽 중앙 계단', W: '5서 중앙 계단' };
 let insideFloor = null, insideWing = null, insideNear = null;
 function openInside() {
+  stopGPS();
+  stopCompass();
+  stopSim();
+  mode = null;
   insideFloor = insideWing = insideNear = null;
   $('near').value = '';
   $('near-cands').innerHTML = '';
@@ -794,21 +970,23 @@ function openInside() {
 }
 function renderInsidePicks() {
   $('pick-floor').innerHTML = [0, 1, 2, 3, 4, 5].map(f => `<button class="mini" data-floor="${f}" aria-pressed="${insideFloor === f}">${Indoor.floorName(f)}</button>`).join('');
-  $('pick-wing').innerHTML = insideFloor === 0 ? '' : ['S', 'E', 'N', 'W'].filter(w => !(insideFloor === 1 && w === 'W'))
+  $('pick-wing').innerHTML = (insideFloor === 0 ? ['E', 'S'] : ['S', 'E', 'N', 'W'].filter(w => !(insideFloor === 1 && w === 'W')))
     .map(w => `<button class="mini" data-wing="${w}" aria-pressed="${insideWing === w}">${t('wing_' + w)}</button>`).join('');
   $('inside-go').disabled = !(insideNear || insideFloor === 0 || (insideFloor !== null && insideWing));
 }
 function insideStart() {
   if (insideNear) return insideNear;
-  if (insideFloor === 0) return 'B1:clubs';
+  if (insideFloor === 0) return insideWing === 'S' ? 'B1S:clubs' : 'B1:clubs';
   return `${CENTRAL[insideWing]}|${insideFloor}`;
 }
 function enterIndoor(from) {
   stopGPS();
+  stopCompass();
   stopSim();
+  mode = null;
   indoorFrom = from;
   const r = Indoor.route(from, target.id, { nw: $('nw').checked });
-  if (!r) { banner(t('room_missing_none', { label: target.label })); return; }
+  if (!r) { banner(() => t('room_missing_none', { label: target.label })); return; }
   plan = { path: r.path, steps: Indoor.buildSteps(r.path) };
   phase = 'indoor';
   inStep = 0;
@@ -829,10 +1007,12 @@ function showIndoor() {
   $('i-dist').textContent = st.from !== undefined ? `${Indoor.floorName(st.from)} → ${Indoor.floorName(st.f)}` : Indoor.floorName(st.f);
   $('i-say').textContent = st.title;
   setPhoto(st.photo);
+  RoutePhotos.render(st, inStep, plan.steps);
   $('i-to').textContent = st.sub;
   $('i-eta').textContent = `${inStep + 1} / ${plan.steps.length}`;
   $('in-prev').disabled = inStep === 0;
-  $('in-next').textContent = inStep === plan.steps.length - 1 ? '처음으로' : '다음';
+  $('in-next').textContent = inStep === plan.steps.length - 1 ? t('app.home') : t('app.next');
+  placeFabs();
   fitScreen(Indoor.viewBounds(plan, inStep), 24, 80);
 }
 $('in-prev').onclick = () => { if (inStep > 0) { inStep--; showIndoor(); } };
@@ -855,15 +1035,17 @@ document.addEventListener('click', e => {
   else if (b.dataset.quick === 'tower') { $('room').value = ''; $('room-hint').textContent = ''; setTarget(null); renderQuick(); $('tower-floors').hidden = false; }
   else if (b.dataset.quick) { $('room').value = ''; $('room-hint').textContent = ''; $('room-cands').innerHTML = ''; $('tower-floors').hidden = true; setTarget({ id: b.dataset.quick, label: Indoor.label(b.dataset.quick) }); renderQuick(); }
   else if (b.dataset.tower) { setTarget({ id: 'T:' + b.dataset.tower, label: Indoor.label('T:' + b.dataset.tower) }); renderQuick(); }
-  else if (b.dataset.floor) { insideFloor = +b.dataset.floor; insideWing = null; renderInsidePicks(); }
+  else if (b.dataset.floor) { insideFloor = +b.dataset.floor; insideWing = insideFloor === 0 ? 'E' : null; renderInsidePicks(); }
   else if (b.dataset.wing) { insideWing = b.dataset.wing; renderInsidePicks(); }
   else if (b.dataset.start) startManual(b.dataset.start);
   else if (b.hasAttribute('data-back')) reset();
 });
 // The browser remembers the permission; we only ask it what the state is, and store nothing ourselves.
 async function askLocation() {
+  const generation = watchGeneration;
   let state = 'prompt';
   try { state = (await navigator.permissions.query({ name: 'geolocation' })).state; } catch { /* older browsers: just ask */ }
+  if (generation !== watchGeneration || phase !== 'outdoor') return;
   if (state === 'granted') startGPS();
   else if (state === 'denied') onPosError({ code: 1 });
   else sheet('s-ask');
@@ -878,6 +1060,61 @@ $('denied-retry').onclick = () => sheet('s-ask');
 $('nav-overview').onclick = () => { follow = false; $('recenter').hidden = !me; overview(); };
 $('nav-stop').onclick = reset;
 window.addEventListener('resize', () => { placeFabs(); draw(); });
+
+// Change only presentation. No route search, location permission request,
+// GPS watch replacement, simulation restart, or navigation reset belongs here.
+function refreshAppLanguage() {
+  const refreshSearch = (input, hint, candidates, selected) => {
+    readRoom(input, hint, candidates, () => {});
+    const parsed = Indoor.parseRoom($(input).value.trim());
+    const chosen = parsed?.candidates?.find(item => item.id === selected);
+    if (chosen) {
+      $(hint).className = 'hint ok';
+      $(hint).textContent = chosen.decode;
+      for (const button of $(candidates).children) button.setAttribute('aria-pressed', String(button.dataset.cand === selected));
+    }
+    return parsed?.id === selected ? parsed : chosen;
+  };
+  const selected = refreshSearch('room', 'room-hint', 'room-cands', target?.id);
+  if (target) target.label = selected?.label || Indoor.label(target.id);
+  refreshSearch('near', 'near-hint', 'near-cands', insideNear);
+  $('room').placeholder = t('room_ph');
+  $('inside-title').textContent = t('inside_title');
+  $('inside-near-label').textContent = t('inside_near');
+  $('near').placeholder = t('inside_near_ph');
+  $('inside-or').textContent = t('inside_or');
+  $('inside-go').textContent = t('inside_start');
+  $('nw-label').textContent = t('nw_toggle');
+  $('in-note').textContent = t('data_note');
+  renderQuick();
+  renderStarts();
+  renderInsidePicks();
+  renderDenied();
+  if (farMessage) $('far-dist').textContent = farMessage();
+  renderBanner();
+
+  if (route) {
+    const focusedIndex = route.steps.indexOf(focusStep);
+    route.destName = localName(C.pois['dest:' + route.dest].name);
+    route.startName = route.startRaw ? localName(route.startRaw) : t('app.position_now');
+    route.steps = buildSteps(route);
+    if (focusedIndex >= 0) focusStep = route.steps[focusedIndex];
+    renderRouteSummary();
+  }
+  if (phase === 'indoor' && plan) {
+    plan.steps = Indoor.buildSteps(plan.path);
+    showIndoor();
+  } else if (route && !$('s-route').hidden) {
+    const savedProgress = progress;
+    showManualStep();
+    progress = savedProgress;
+  } else if (route && !$('instr').hidden) {
+    const st = nextStepFrom(progress);
+    showInstr(st, st.at - progress);
+  }
+  placeFabs();
+  draw();
+}
 
 renderQuick();
 renderStarts();

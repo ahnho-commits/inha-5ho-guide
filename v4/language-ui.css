@@ -1,0 +1,55 @@
+.language-bar { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 8px); right: max(12px, env(safe-area-inset-right, 0px)); z-index: 80; display: flex; justify-content: flex-end; max-width: calc(100% - 24px); }
+.language-toggle { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 14px; font-weight: 750; }
+.language-toggle svg { width: 18px; height: 18px; flex: none; }
+.language-current { color: var(--muted); max-width: 130px; overflow-wrap: anywhere; font-size: 12px; }
+.language-panel { position: fixed; z-index: 100; top: calc(env(safe-area-inset-top, 0px) + 58px); right: max(12px, env(safe-area-inset-right, 0px)); width: min(360px, calc(100% - 24px)); max-height: calc(100dvh - 80px); overflow-y: auto; overscroll-behavior: contain; padding: 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); box-shadow: 0 14px 60px #1f293744; }
+.language-panel header { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.language-panel h2 { font-size: 18px; margin: 0; overflow-wrap: anywhere; }
+.language-panel header button { background: var(--soft); border: 0; min-width: 44px; min-height: 44px; border-radius: 12px; font-size: 22px; flex: none; }
+.language-panel p { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.language-options { display: grid; gap: 6px; }
+.language-options button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 15px; text-align: start; }
+.language-options button[aria-pressed="true"] { border-color: var(--route); background: var(--accent-soft); color: var(--route); font-weight: 750; }
+.language-check { visibility: hidden; }
+[aria-pressed="true"] > .language-check { visibility: visible; }
+.top { top: calc(env(safe-area-inset-top, 0px) + 58px); padding-top: 0; max-height: calc(44dvh - 58px); overflow-y: auto; overscroll-behavior: contain; }
+.instr { grid-template-columns: 48px minmax(0, 1fr); }
+.instr.photo { grid-template-columns: 48px minmax(0, 1fr) 68px; }
+.instr .icon { width: 48px; height: 48px; }
+.instr .thumb { width: 68px; height: 68px; }
+.instr .say { font-size: 18px; overflow-wrap: anywhere; }
+.instr .dist { font-size: 25px; overflow-wrap: anywhere; }
+.instr .meta { flex-wrap: wrap; }
+.instr .meta span { min-width: 0; overflow-wrap: anywhere; }
+.instr .meta span:last-child { flex-shrink: 0; }
+.banner { flex-wrap: wrap; overflow-wrap: anywhere; }
+.banner button { flex: 0 1 auto; }
+.sheet { overscroll-behavior: contain; scrollbar-gutter: stable; }
+.sheet > * { flex-shrink: 0; min-width: 0; }
+.sheet h1, .sheet h2, .sheet p, .label, .hint, .btn, .mini, .chip, .check span { overflow-wrap: anywhere; }
+.row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+.row .btn { min-width: 0; }
+.btn { line-height: 1.35; }
+.check input { flex: none; }
+.field input { min-width: 0; }
+.field input::placeholder { font-size: clamp(16px, 4.5vw, 20px); }
+.credit { max-width: calc(100% - 16px); font-size: 9px; line-height: 1.3; padding: 3px 5px; border-radius: 6px; background: var(--card); }
+.sheet { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--credit-space, 40px)); }
+.step-photo-body { align-items: flex-start; }
+.step-photo-actions button { max-width: 100%; overflow-wrap: anywhere; line-height: 1.35; min-height: 40px; }
+.step-photo-cue, .sheet .step-photo-caption { overflow-wrap: anywhere; }
+.field-gallery .field-bar { align-items: flex-start; }
+.field-gallery .field-heading { min-width: 0; overflow-wrap: anywhere; }
+.field-gallery .field-bar > button { flex-shrink: 0; max-width: 42%; overflow-wrap: anywhere; }
+.field-gallery .field-nav, .field-gallery .field-sections { flex-wrap: wrap; justify-content: center; }
+.field-gallery .field-nav button, .field-gallery .field-sections button { max-width: 100%; overflow-wrap: anywhere; }
+.field-gallery .field-caption, .field-gallery .field-notice, .field-gallery .field-hint { overflow-wrap: anywhere; flex-shrink: 0; }
+#viewer.field-gallery { padding-top: calc(env(safe-area-inset-top, 0px) + 66px); overflow-y: auto; justify-content: flex-start; }
+.field-gallery .field-image { max-height: 40dvh; flex-shrink: 0; }
+@media (max-width: 360px) { .language-current { display: none; } .row .btn { font-size: 16px; padding: 12px 8px; } .sheet { padding-left: 12px; padding-right: 12px; } .instr { padding: 12px; } .instr .say { font-size: 16px; } }
+@media (max-height: 500px) { .top { max-height: calc(50dvh - 58px); } .sheet { gap: 8px; padding-top: 14px; } .btn { min-height: 44px; padding: 10px; } .step-photo img { height: 76px; } }
+
+.privacy-notice { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.privacy-notice summary { cursor: pointer; min-height: 36px; padding: 6px 0; color: var(--ink); font-weight: 650; }
+.sheet .privacy-notice p { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
+.privacy-notice a { color: var(--route); overflow-wrap: anywhere; }

@@ -13,19 +13,24 @@ const Indoor = (() => {
   const LO = 12, HI = 88;
 
   const node = id => NODES.get(id);
-  const floorName = f => f === 0 ? 'B1' : f > 5 ? `탑 ${f}F` : `${f}F`;
+  const floorName = f => f === 0 ? 'B1' : f > 5 ? `T${f}F` : `${f}F`;
   const floorText = f => f === 0 ? t('floor_b1') : f > 5 ? t('floor_tower', { f }) : t('floor', { f });
   function label(id) {
     const n = node(id);
     if (!n) return id;
-    if (n.kind === 'stair') return n.name.replace(/\|.*/, '');
-    return n.label || n.name;
+    if (n.kind === 'stair') return localName(n.name.replace(/\|.*/, ''));
+    if (n.kind === 'room') return roomName(n);
+    return localName(n.label || n.name);
   }
 
   // Reads a room however people type it: "5E 107A", "5e-107a", "5동 107A", "5동관 107", "동107", "5남 335",
   // "5호관 5S335", "E107". "107" alone, or 107 when the room is split into 107A/107B, comes back as a list to pick from.
   const ROOMS = [...NODES.values()].filter(n => n.kind === 'room' && !n.id.includes('화장실'));
-  const roomName = n => `${t('wing_' + n.w)} ${n.id.slice(2)}`;
+  const roomName = n => {
+    const room = n.id.slice(2).replace(' (화장실)', '');
+    const name = t('nav.room_label', { wing: t('wing_' + n.w), room });
+    return n.id.includes('화장실') ? t('nav.room_restroom', { room: name }) : name;
+  };
   function readable(text) {
     return text.normalize('NFKC').toUpperCase()
       .replace(/5\s*호\s*관/g, '')
@@ -60,22 +65,80 @@ const Indoor = (() => {
     return near ? { id: near.id, label, decode: decode(near), missing: true, near: roomName(near) } : { id: null, label, missing: true };
   }
 
-  function route(from, to, { nw = false } = {}) {
+  // Floor changes must use an actual stair/lift/tower connection. The source
+  // data also contains a room-to-room 5F/3F link; it is not a usable stair.
+  const isConnector = n => n.kind === 'stair' || n.id.startsWith('T:') || n.id === 'B1S:clubs';
+  const isFloorLink = (a, b) => Math.abs(a.f - b.f) === 1 && isConnector(a) && isConnector(b);
+
+  function search(from, nw, allow, target) {
     const D = new Map([[from, 0]]), prev = new Map(), done = new Set();
     while (true) {
       let u = null, best = Infinity;
       for (const [k, d] of D) if (!done.has(k) && d < best) { best = d; u = k; }
-      if (u === null) return null;
-      if (u === to) break;
+      if (u === null || u === target) break;
       done.add(u);
       for (const [v, w, flag] of ADJ.get(u)) {
         if (flag === 'nw' && !nw) continue;
+        const a = node(u), b = node(v);
+        if (a.f !== b.f && !isFloorLink(a, b)) continue;
+        if (!allow(a, b)) continue;
         if (best + w < (D.get(v) ?? Infinity)) { D.set(v, best + w); prev.set(v, u); }
       }
     }
+    return { D, prev };
+  }
+
+  function pathFrom(tree, from, to) {
+    if (!tree.D.has(to)) return null;
     const path = [to];
-    while (path[0] !== from) path.unshift(prev.get(path[0]));
-    return { path, cost: D.get(to) };
+    while (path[0] !== from) path.unshift(tree.prev.get(path[0]));
+    return path;
+  }
+
+  function route(from, to, { nw = false } = {}) {
+    if (!NODES.has(from) || !NODES.has(to)) return null;
+    const startFloor = node(from).f, goalFloor = node(to).f;
+    const onFloor = f => (a, b) => a.f === f && b.f === f;
+    const approach = search(from, nw, onFloor(startFloor), startFloor === goalFloor ? to : undefined);
+
+    // A connected same-floor corridor always takes precedence over a shortcut
+    // that leaves the floor and returns via another staircase.
+    if (startFloor === goalFloor && approach.D.has(to)) {
+      return { path: pathFrom(approach, from, to), cost: approach.D.get(to) };
+    }
+
+    if (startFloor !== goalFloor) {
+      const arrival = search(to, nw, onFloor(goalFloor));
+      const direction = Math.sign(goalFloor - startFloor);
+      const towardGoal = (a, b) => isFloorLink(a, b)
+        && Math.sign(b.f - a.f) === direction
+        && (goalFloor - b.f) * direction >= 0;
+      let best = null;
+      for (const [landing, walkCost] of approach.D) {
+        if (best && walkCost > best.walkCost) continue;
+        if (!ADJ.get(landing).some(([next, , flag]) => (flag !== 'nw' || nw) && towardGoal(node(landing), node(next)))) continue;
+        const vertical = search(landing, nw, towardGoal);
+        for (const [exit, riseCost] of vertical.D) {
+          if (node(exit).f !== goalFloor || !arrival.D.has(exit)) continue;
+          const cost = walkCost + riseCost + arrival.D.get(exit);
+          // First use the nearest usable floor connection, then the shortest
+          // route among equally near connections. Do not encode this as metres.
+          if (best && (walkCost > best.walkCost || (walkCost === best.walkCost && cost >= best.cost))) continue;
+          best = { walkCost, cost, path: [
+            ...pathFrom(approach, from, landing),
+            ...pathFrom(vertical, landing, exit).slice(1),
+            ...pathFrom(arrival, to, exit).reverse().slice(1),
+          ] };
+        }
+      }
+      if (best) return { path: best.path, cost: best.cost };
+    }
+
+    // Some destinations require a transfer (tower stairs at 5F) or another
+    // floor (the separate basements). Use only existing, valid connections.
+    const fallback = search(from, nw, () => true, to);
+    const path = pathFrom(fallback, from, to);
+    return path ? { path, cost: fallback.D.get(to) } : null;
   }
 
   function edgeType(a, b) {
@@ -129,7 +192,8 @@ const Indoor = (() => {
       const first = node(r.ids[0]), last = node(r.ids[r.ids.length - 1]);
       const s = { ids: r.ids, f: last.f };
       if (r.type === 'enter') {
-        Object.assign(s, { icon: 'start', title: t('step_enter', { entrance: first.name }), sub: t('step_enter_sub', { place: label(last.id) }), f: 1, photo: first.id === 'ENT:corner' ? 'door' : undefined });
+        Object.assign(s, { icon: 'start', title: t('step_enter', { entrance: localName(first.name) }), sub: t('step_enter_sub', { place: label(last.id) }), f: 1, photo: first.id === 'ENT:corner' ? 'door' : undefined });
+        if (first.id === 'ENT:south') s.fieldPhoto = '0844';
       } else if (r.type === 'walk') {
         const rooms = r.ids.map(node).filter(n => n.kind === 'room');
         if (rooms.length < 2 && steps.length && !r.turn) continue;   // a step across the landing, not worth its own card
@@ -147,9 +211,9 @@ const Indoor = (() => {
         const goingUp = last.f > first.f;
         // The basement stairs hang off the lift landing, but the lift itself doesn't go down there.
         const b1 = [first, last].find(n => n.id.startsWith('B1:'));
-        const stair = b1 ? b1.name : first.kind === 'stair' ? label(first.id) : label(last.id);
+        const stair = b1 ? b1.name : first.kind === 'stair' ? first.name : (last.name || last.label);
         const lift = !b1 && stair.includes('엘리베이터');
-        const name = stair === X_STAIR ? 'X자 계단' : lift ? t('stair_lift') : stair;
+        const name = stair === X_STAIR ? t('nav.xstairs') : lift ? t('stair_lift') : localName(stair);
         Object.assign(s, {
           icon: goingUp ? 'up' : 'down',
           title: lift ? t('step_lift', { to: floorText(last.f) }) : t('step_stairs', { stair: name, stair_ro: ro(name), to: floorText(last.f) }),
@@ -165,7 +229,19 @@ const Indoor = (() => {
       } else if (r.type === 'tower') {
         Object.assign(s, { icon: 'right', title: t('step_tower_in'), sub: t('step_tower_in_sub'), warn: true, photo: 'towersign' });
       }
+      const southDescent = first.id === '5남 중앙 계단|1' && last.id === 'B1S:clubs';
+      if (southDescent) {
+        steps.push({ ids: [first.id], f: 1, icon: 'right', fieldPhoto: '0845',
+          title: t('nav.south_orient'),
+          sub: t('nav.south_orient_sub') });
+        Object.assign(s, { fieldPhoto: '0846', connectorGroup: 'south-central',
+          title: t('nav.south_down'),
+          sub: t('nav.south_down_sub') });
+      }
       steps.push(s);
+      if (southDescent) steps.push({ ...s, fieldPhoto: '0847', connectorDuplicate: true,
+        title: t('nav.south_mid'),
+        sub: t('nav.south_mid_sub') });
     }
     if (steps[0] && steps[0].photo === 'door' && steps[1] && !steps[1].photo) steps[1].photo = 'lobby';
     const end = node(path[path.length - 1]);
@@ -174,6 +250,7 @@ const Indoor = (() => {
       ids: [end.id], f: end.f, icon: 'arrive', title: t('step_arrive', { to: label(end.id) }),
       sub: end.kind === 'room' ? [t('step_arrive_sub', { to: label(end.id) }), side.length ? t('step_neighbors', { list: side.map(doorNo).join(' · ') }) : ''].filter(Boolean).join(' · ') : t('step_arrive_place'),
       checks: side.map(n => n.id),
+      ...(end.id === 'B1S:clubs' ? { fieldPhoto: '0850', sub: t('nav.south_arrive_sub') } : {}),
     });
     return steps;
   }
@@ -301,6 +378,11 @@ const Indoor = (() => {
     const taken = [];                             // screen boxes already used by labels, so room tags don't pile up
     let loose = [];
     let s = '';
+    const southLanding = { x0: 55.8, y0: 84, x1: 63.8, y1: 92 };
+    const hasSouthB1 = plan.path.includes('B1S:clubs');
+    const hasEastB1 = plan.path.some(id => id.startsWith('B1:'));
+    const floorShapes = f => f === 0 && hasSouthB1
+      ? [...(hasEastB1 ? [SHAPES.b1] : []), southLanding] : [shapeOf(f)];
     const sameFloor = ids => {
       const runs = [];
       for (let i = 1; i < ids.length; i++) {
@@ -362,7 +444,7 @@ const Indoor = (() => {
 
     for (const f of floors) {
       const op = f === cur.f ? 1 : f === cur.from ? .55 : f < top ? .16 : .05;
-      s += slab(shapeOf(f), zOf(f), op, f === cur.f ? 4 : 2.5);
+      for (const sh of floorShapes(f)) s += slab(sh, zOf(f), op, f === cur.f ? 4 : 2.5);
       if (f !== cur.f) continue;
       const z = zOf(f);
       if (f >= 1 && f <= 5) {
@@ -372,19 +454,25 @@ const Indoor = (() => {
         for (const [w, x, y] of [['N', 50, LO + B + 20], ['E', HI - B - 20, 50], ['S', 50, HI - B - 20], ['W', LO + B + 20, 50]]) {   // in the courtyard, clear of the rooms
           if (f === 1 && w === 'W') continue;
           const [px, py] = iso(x, y, z), r = RANGES[`${f}${w}`];
-          taken.push([px - 24 * k, py - 24 * k, px + 24 * k, py + (r ? 11 : -4) * k]);
-          s += `<text class="lbl" x="${px}" y="${py - 9 * k}" font-size="${15 * k}" font-weight="800" fill="var(--ink)" stroke-width="${3.5 * k}" text-anchor="middle">${t('wing_' + w)}</text>`;
-          if (r) s += `<text class="lbl" x="${px}" y="${py + 7 * k}" font-size="${11 * k}" font-weight="600" fill="var(--muted)" stroke-width="${3 * k}" text-anchor="middle">${r[0]}~${r[1]}호</text>`;
+          // Shared room codes stay short and match the search examples/signs.
+          // The instruction card carries the full translated wing name.
+          const wingText = LANG === 'ko' ? t('wing_' + w) : '5' + w;
+          const rangeText = r ? t('nav.rooms', { first: r[0], last: r[1] }) : '';
+          const labelWidth = Math.max(textWidth(wingText, 15, 800), textWidth(rangeText, 11, 600)) + 8;
+          taken.push([px - labelWidth * k / 2, py - 24 * k, px + labelWidth * k / 2, py + (r ? 11 : -4) * k]);
+          s += `<text class="lbl" x="${px}" y="${py - 9 * k}" font-size="${15 * k}" font-weight="800" fill="var(--ink)" stroke-width="${3.5 * k}" text-anchor="middle">${wingText}</text>`;
+          if (r) s += `<text class="lbl" x="${px}" y="${py + 7 * k}" font-size="${11 * k}" font-weight="600" fill="var(--muted)" stroke-width="${3 * k}" text-anchor="middle">${rangeText}</text>`;
         }
       }
-      const sh = shapeOf(f), [fx, fy] = iso(sh.x0, sh.y0, z);
+      const sh = floorShapes(f)[0], [fx, fy] = iso(sh.x0, sh.y0, z);
       s += `<text class="lbl" x="${fx - 14 * k}" y="${fy + 6 * k}" font-size="${18 * k}" font-weight="800" fill="var(--route)" stroke-width="${3 * k}" text-anchor="end">${floorName(f)}</text>`;
     }
     // Stairs and the lift for every floor change on the way; the current one solid.
     plan.steps.forEach((st, i) => {
-      if (st.from === undefined) return;
+      if (st.from === undefined || st.connectorDuplicate) return;
       const anchor = st.ids.map(node).find(n => n.kind === 'stair' && n.f === st.from) || node(st.ids[0]);
-      s += st.lift ? liftShaft(anchor.x, anchor.y, st.from, st.f, i === stepIdx, k) : staircase(anchor.x, anchor.y, st.from, st.f, i === stepIdx);
+      const active = i === stepIdx || (!!st.connectorGroup && st.connectorGroup === cur.connectorGroup);
+      s += st.lift ? liftShaft(anchor.x, anchor.y, st.from, st.f, active, k) : staircase(anchor.x, anchor.y, st.from, st.f, active);
     });
     // Route on the floor you're looking at: this step bold, the rest of this floor faint. Floor changes are the stairs above.
     for (const run of sameFloor(plan.path)) {
@@ -396,21 +484,21 @@ const Indoor = (() => {
       s += `<path d="${line(run)}" fill="none" stroke="var(--route)" stroke-width="${7 * k}" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
     const tag = (id, text, fill) => {
-      const [x, y] = at(id), w = (text.length * 12 + 16) * k, h = 22 * k;
+      const [x, y] = at(id), w = (textWidth(text, 12, 700) + 16) * k, h = 22 * k;
       return `<g transform="translate(${x} ${y})"><rect x="${-w / 2}" y="${-h - 7 * k}" width="${w}" height="${h}" rx="${h / 2}" fill="${fill}"/><text y="${-7 * k - h / 2 + 4.3 * k}" font-size="${12 * k}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text><circle r="${4.5 * k}" fill="${fill}" stroke="#fff" stroke-width="${1.5 * k}"/></g>`;
     };
-    const tags = [[end, label(end).replace(/^5[동서남북] /, ''), 'var(--dest)']];
-    if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) tags.unshift([start, node(start).kind === 'entrance' ? '입구' : '출발', 'var(--ink)']);
+    const tags = [[end, node(end).kind === 'room' ? doorNo(node(end)) : label(end), 'var(--dest)']];
+    if (start !== end && (node(start).f === cur.f || node(start).f === cur.from)) tags.unshift([start, node(start).kind === 'entrance' ? t('nav.entry') : t('nav.start'), 'var(--ink)']);
     for (const [id, text, fill] of tags) {
       s += tag(id, text, fill);
-      const [x, y] = at(id), w = (text.length * 12 + 16) * k;
+      const [x, y] = at(id), w = (textWidth(text, 12, 700) + 16) * k;
       if (node(id).f === cur.f) taken.push([x - w / 2, y - 29 * k, x + w / 2, y + 3 * k]);
     }
     // Rooms to look for whose number didn't fit on their block: blue for "you're on track", grey for "wrong way".
     // A tag goes below, above, right or left of the room, or is left out (the card still lists every room).
     const hit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
     const door = (id, text, ink, edge) => {
-      const [x, y] = at(id), w = (text.length * 8 + 12) * k, h = 18 * k;
+      const [x, y] = at(id), w = (textWidth(text, 11, 800) + 12) * k, h = 18 * k;
       for (const [dx, dy] of [[-w / 2, 6 * k], [-w / 2, -h - 6 * k], [8 * k, -h / 2], [-w - 8 * k, -h / 2]]) {
         const box = [x + dx - 2 * k, y + dy - 2 * k, x + dx + w + 2 * k, y + dy + h + 2 * k];
         if (taken.some(t => hit(t, box))) continue;

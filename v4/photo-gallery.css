@@ -1,0 +1,47 @@
+/* Additive photo controls: the existing map, cards and navigation keep their layout. */
+#i-photo { position: relative; }
+.field-photo-count { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px 0; color: #fff; background: rgba(17,24,39,.78); font-size: 11px; font-weight: 700; }
+#viewer.field-gallery { padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); gap: 14px; }
+.field-gallery .field-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; max-width: 640px; color: white; }
+.field-gallery .field-heading { display: flex; flex-direction: column; gap: 4px; }
+.field-gallery .field-heading strong { font-size: 19px; }
+.field-gallery .field-heading span { font-size: 13px; color: #d1d5db; }
+.field-gallery button { border: 1px solid rgba(255,255,255,.3); color: #fff; background: rgba(255,255,255,.09); border-radius: 14px; padding: 10px 16px; min-height: 44px; font-weight: 700; }
+.field-gallery .field-image { display: block; width: auto; height: auto; max-width: min(100%, 640px); max-height: min(60vh, 680px); object-fit: contain; border-radius: 16px; min-height: 0; }
+.field-gallery .field-caption { max-width: 580px; line-height: 1.6; }
+.field-gallery .field-nav { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 400px; gap: 16px; color: #fff; }
+.field-gallery .field-position { font-size: 14px; font-variant-numeric: tabular-nums; }
+.field-gallery .field-hint { color: #d1d5db; font-size: 12px; }
+.field-guide-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field-guide-links > span { font-size: 13px; color: var(--muted); font-weight: 700; margin-right: 2px; }
+.field-guide-links button { border: 1px solid var(--line); border-radius: 12px; background: var(--soft); padding: 8px 12px; min-height: 44px; font-size: 14px; font-weight: 700; }
+.field-guide-links button::before { content: '▧'; color: var(--route); margin-right: 6px; }
+#viewer.field-gallery.has-guide { justify-content: flex-start; overflow-y: auto; gap: 10px; }
+.field-gallery.has-guide .field-image { max-height: 40vh; max-height: 40dvh; flex-shrink: 0; }
+.field-gallery.has-guide .field-caption { width: 100%; max-width: 640px; text-align: left; }
+.field-gallery .field-caption strong { display: block; color: #fff; font-size: 16px; line-height: 1.4; margin-bottom: 5px; }
+.field-gallery.has-guide .field-caption p { text-align: left; font-size: 14px; line-height: 1.6; color: #e5e7eb; }
+.field-gallery .field-notice { width: 100%; max-width: 640px; border-radius: 12px; padding: 10px 12px; background: #fef3c7; color: #78350f; font-size: 13px; line-height: 1.45; text-align: left; }
+.field-gallery .field-sections { display: flex; gap: 8px; width: 100%; max-width: 640px; }
+.field-gallery .field-sections button { padding: 8px 14px; font-size: 13px; }
+.field-gallery .field-sections button[aria-pressed="true"] { color: var(--ink); background: #fff; }
+.field-gallery.has-guide .field-nav { flex-shrink: 0; }
+.field-gallery.has-guide .field-hint { font-size: 11px; }
+.step-photo { border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px; background: var(--soft); }
+.step-photo-cue { display: block; color: var(--route); font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+.step-photo-body { display: flex; gap: 12px; align-items: center; }
+.step-photo img { display: block; width: 44%; height: 116px; flex-shrink: 0; object-fit: contain; border-radius: 10px; background: #e1e5eb; cursor: zoom-in; }
+.step-photo-copy { flex: 1; min-width: 0; }
+.sheet .step-photo-caption { margin: 0; color: var(--ink); font-size: 14px; font-weight: 650; line-height: 1.4; }
+.step-photo-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.step-photo-actions button { min-height: 36px; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.sheet .step-photo-schematic { margin-top: 7px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.indoor-data-note { color: var(--muted); font-size: 13px; }
+.indoor-data-note summary { cursor: pointer; padding: 4px 0; }
+.sheet .indoor-data-note p { font-size: 13px; margin-top: 6px; }
+@media (max-height: 740px) { .step-photo img { height: 100px; } }
+@media (max-height: 520px) {
+  #viewer.field-gallery { gap: 8px; }
+  .field-gallery .field-image { max-height: 40vh; }
+  .field-gallery .field-hint { display: none; }
+}

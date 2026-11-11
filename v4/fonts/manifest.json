@@ -1,0 +1,269 @@
+{
+  "status": "pass",
+  "locales": {
+    "ko": {
+      "required_codepoints": 469,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "en": {
+      "required_codepoints": 126,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "zh-Hans": {
+      "required_codepoints": 540,
+      "cjk_region": "sc",
+      "missing_codepoints": []
+    },
+    "vi": {
+      "required_codepoints": 182,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "ru": {
+      "required_codepoints": 169,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "uz": {
+      "required_codepoints": 126,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "mn": {
+      "required_codepoints": 170,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "ja": {
+      "required_codepoints": 499,
+      "cjk_region": "jp",
+      "missing_codepoints": []
+    },
+    "zh-Hant": {
+      "required_codepoints": 543,
+      "cjk_region": "tc",
+      "missing_codepoints": []
+    },
+    "id": {
+      "required_codepoints": 125,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    },
+    "ms": {
+      "required_codepoints": 125,
+      "cjk_region": "kr",
+      "missing_codepoints": []
+    }
+  },
+  "total_asset_bytes": 1046752,
+  "source_commits": {
+    "noto-cjk": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
+    "noto-fonts": "ffebf8c1ee449e544955a7e813c54f9b73848eac"
+  },
+  "sources": [
+    {
+      "name": "NotoSans-Regular.ttf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
+      "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+      "bytes": 569208
+    },
+    {
+      "name": "NotoSansCJKkr-Regular.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf",
+      "sha256": "6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a",
+      "bytes": 16433112
+    },
+    {
+      "name": "NotoSansCJKsc-Regular.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+      "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
+      "bytes": 16437364
+    },
+    {
+      "name": "NotoSansCJKtc-Regular.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf",
+      "sha256": "dce08bd4fd91aa8aa76ed8fea4b694c2dfb8550f67871e326843212ddbeb88b4",
+      "bytes": 16435884
+    },
+    {
+      "name": "NotoSansCJKjp-Regular.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf",
+      "sha256": "68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5",
+      "bytes": 16467736
+    },
+    {
+      "name": "NotoSans-Bold.ttf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
+      "sha256": "c976e4b1b99edc88775377fcc21692ca4bfa46b6d6ca6522bfda505b28ff9d6a",
+      "bytes": 575740
+    },
+    {
+      "name": "NotoSansCJKkr-Bold.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/Korean/NotoSansCJKkr-Bold.otf",
+      "sha256": "26d0c6748500a0444844280b308f5b62c7ae92ac6c6ac88148e502dd211eb52a",
+      "bytes": 16997996
+    },
+    {
+      "name": "NotoSansCJKsc-Bold.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Bold.otf",
+      "sha256": "b5f0d1a190a7f9b43c310a8850630af12553df32c4c050543f9059732d9b4c0a",
+      "bytes": 17002248
+    },
+    {
+      "name": "NotoSansCJKtc-Bold.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Bold.otf",
+      "sha256": "3ee160e5015106e3ec1a394301df54fa9bbbf8a251519984aec5c0abc50840c0",
+      "bytes": 17000768
+    },
+    {
+      "name": "NotoSansCJKjp-Bold.otf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/Japanese/NotoSansCJKjp-Bold.otf",
+      "sha256": "e53dcb0dcb2922e45d01aae1ebd2f382bb81d4229b18b6b883bd170678af1f76",
+      "bytes": 17032620
+    },
+    {
+      "name": "OFL-NotoSans.txt",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/LICENSE",
+      "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb",
+      "bytes": 4377
+    },
+    {
+      "name": "OFL-NotoSansCJK.txt",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE",
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "bytes": 4301
+    },
+    {
+      "name": "NotoSansSymbols2-Regular.ttf",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-fonts/ffebf8c1ee449e544955a7e813c54f9b73848eac/hinted/ttf/NotoSansSymbols2/NotoSansSymbols2-Regular.ttf",
+      "sha256": "630846d528dbe4c4981370a4d0a9475a1fd1491a129bb411f8e157cdb5de13c6",
+      "bytes": 656852
+    }
+  ],
+  "files": [
+    {
+      "file": "guide-sans-regular.woff2",
+      "family": "Guide Sans",
+      "style": "Regular",
+      "bytes": 25684,
+      "sha256": "bc9ba583da5f205f3d0b15c45181d28df74ac883a43b9ee1d06e0779479f371c",
+      "source": "NotoSans-Regular.ttf",
+      "codepoints": 230
+    },
+    {
+      "file": "guide-cjk-kr-regular.woff2",
+      "family": "Guide CJK KR",
+      "style": "Regular",
+      "bytes": 36384,
+      "sha256": "8b0244403152f37472a1360fd113aec729a88c9656dbce655268a14b54d7e7b2",
+      "source": "NotoSansCJKkr-Regular.otf",
+      "codepoints": 349
+    },
+    {
+      "file": "guide-cjk-sc-regular.woff2",
+      "family": "Guide CJK SC",
+      "style": "Regular",
+      "bytes": 129108,
+      "sha256": "8893794b1bd36b3248945a22f7ab5cd33aaa7b35bf8ad849f392c9d8214b8f0e",
+      "source": "NotoSansCJKsc-Regular.otf",
+      "codepoints": 436
+    },
+    {
+      "file": "guide-cjk-tc-regular.woff2",
+      "family": "Guide CJK TC",
+      "style": "Regular",
+      "bytes": 176576,
+      "sha256": "ed0cc9e88b1558989c9aabbb7d011dc4a3043632b4a7fca117cbcf225774b151",
+      "source": "NotoSansCJKtc-Regular.otf",
+      "codepoints": 441
+    },
+    {
+      "file": "guide-cjk-jp-regular.woff2",
+      "family": "Guide CJK JP",
+      "style": "Regular",
+      "bytes": 148568,
+      "sha256": "12099e96294773d4e596a8e1c176fd9a6330394b7d3495615c251a3a87a00d95",
+      "source": "NotoSansCJKjp-Regular.otf",
+      "codepoints": 397
+    },
+    {
+      "file": "guide-sans-bold.woff2",
+      "family": "Guide Sans",
+      "style": "Bold",
+      "bytes": 25440,
+      "sha256": "4a193b1b9fc6bd18f9101e12985bb2ff1169792fd15a686978b41d3b17ef0361",
+      "source": "NotoSans-Bold.ttf",
+      "codepoints": 230
+    },
+    {
+      "file": "guide-cjk-kr-bold.woff2",
+      "family": "Guide CJK KR",
+      "style": "Bold",
+      "bytes": 36964,
+      "sha256": "4d70c7722d1fbd093b8a279c22136b9a815a189df787e50c86aff39a66b2c840",
+      "source": "NotoSansCJKkr-Bold.otf",
+      "codepoints": 349
+    },
+    {
+      "file": "guide-cjk-sc-bold.woff2",
+      "family": "Guide CJK SC",
+      "style": "Bold",
+      "bytes": 131956,
+      "sha256": "a54d13b4ffb9fcbd1a816990480cfb640183918e289143746e943df9742d3013",
+      "source": "NotoSansCJKsc-Bold.otf",
+      "codepoints": 436
+    },
+    {
+      "file": "guide-cjk-tc-bold.woff2",
+      "family": "Guide CJK TC",
+      "style": "Bold",
+      "bytes": 182668,
+      "sha256": "f08c9074652ab3f2ecf5a48de04852cb87065c8f64920dd1622010e5695c7ddc",
+      "source": "NotoSansCJKtc-Bold.otf",
+      "codepoints": 441
+    },
+    {
+      "file": "guide-cjk-jp-bold.woff2",
+      "family": "Guide CJK JP",
+      "style": "Bold",
+      "bytes": 152280,
+      "sha256": "be9fec8aec4a725ae35f5a4eb2e7d9e744dc4c322255e84c387b4b783175a668",
+      "source": "NotoSansCJKjp-Bold.otf",
+      "codepoints": 397
+    },
+    {
+      "file": "guide-symbols.woff2",
+      "family": "Guide Symbols",
+      "style": "Regular",
+      "bytes": 1124,
+      "sha256": "8841bf3eadf7a67ccc23f6f4b005a1388f2da2445918e2da1cf929c6f5759294",
+      "source": "NotoSansSymbols2-Regular.ttf",
+      "codepoints": 3
+    }
+  ],
+  "catalog_sha256": {
+    "ko": "112d4e0f5e069670529d3861972b1ace3d6ae281ca27e1d053eb84e7ac98e7cc",
+    "en": "af85a0f9d8b050324789cf86dd64771192c0c2452f0bf1cb12b55d8d8e42525f",
+    "zh-Hans": "44411ef9847dd0e6704e6e78a59eb9a2e06d9709f3b485785ff43865917baa8f",
+    "vi": "46ac569edee25c993407a425cd827e5fecd1465b05546cee94f87abaa569ffab",
+    "ru": "a12d69558725d0c6f0207baf3b4e8f12091bc6a400a5e7188e2846b3d6e97ad2",
+    "uz": "e919a7e035b14a07260b400374ef42679062369f00aa938f1ffb8ef05d7aef54",
+    "mn": "a635a1aff989f9accc04b0d933c4ec11ee47e4d53cc7106f6326f9818de76c0b",
+    "ja": "15e10dc09da7ce5a003e320183f32a6c018b2854a51474acccab40a6d68e5932",
+    "zh-Hant": "da6f5d63ffd706da6af5bf29c0d8ea010f644ac7d529766d974db378f0f48b70",
+    "id": "f3d0e406111e0d0ceeac88b1311b14dd1adbf638756f2b507e88748f77140044",
+    "ms": "9e8b9d3b047f445912e1e33277bfbcc8cbbb76df4caa6254f6f943f15b8529a4"
+  },
+  "build_tools": {
+    "fontTools": "4.68.0",
+    "Brotli": "1.2.1",
+    "source": "https://pypi.org"
+  },
+  "coverage_exclusions": [
+    "Control/format characters",
+    "U+1F310 globe emoji and variation selectors use platform emoji rendering"
+  ],
+  "scope": "Cmap coverage and WOFF2 round-trip verified for current catalogs, all language autonyms and runtime navigation symbols; this does not prove rendering on every physical device."
+}

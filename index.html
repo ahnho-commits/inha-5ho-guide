@@ -2,15 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-7+Sk0943K7akG62/4KRkRI9zcPu1cMDY6gGKxQBfFw0='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
 <title>5호관 길찾기 QR</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@600&display=swap">
+<link rel="stylesheet" href="v4/fonts.css?v=7826ecf78979">
 <style>
 /* Layout: phone column. Isometric block model on top, a bottom-sheet step card below. */
 :root {
@@ -20,8 +20,8 @@
   --warn-bg: #FFF7E6; --warn-ink: #8A4B00;
   --wN: #DBEAFE; --wE: #DCFCE7; --wS: #FFEDD5; --wW: #EDE9FE;
   --ground: #E6EAF0; --road: #CDD3DD; --field: #BFE3C8; --ctx-top: #F7F8FA; --ctx-side: #DADFE7;
-  --f: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --f: 'Guide Sans', 'Guide CJK KR', 'Guide Symbols', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -456,11 +456,12 @@ $('go-pick').onclick = () => show('pick');
 $('ent').onchange = () => setEnt($('ent').value);
 $('prev').onclick = () => { if (run.i > 0) { run.i--; renderStep(run.i + 1); } };
 $('next').onclick = () => { if (run.i < run.steps.length - 1) { run.i++; renderStep(run.i - 1); } else show('pick'); };
-window.addEventListener('hashchange', () => { const k = location.hash.slice(1); if (ENT[k]) setEnt(k); });
+window.addEventListener('hashchange', () => { const k = location.hash.slice(1); if (['corner', 'south'].includes(k)) setEnt(k); });
 
 setEnt(entKey);
 show('intro');
 </script>
 
+<details style="max-width:428px;margin:12px auto 28px;padding:0 16px;font-size:13px"><summary>개인정보·접속 기록</summary><p>이 QR 안내는 분석·광고 추적 도구를 사용하지 않으며 운영자에게 검색·경로 기록을 전송하지 않습니다. 사이트를 제공하는 GitHub Pages는 보안을 위해 접속 IP를 기록합니다.</p><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" rel="noopener noreferrer" target="_blank">GitHub의 데이터 수집 안내</a></details>
 </body>
 </html>

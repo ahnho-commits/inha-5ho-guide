@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-6sZhqfT9Ml91zxy/BGSMz92laNYocwrUBu9hbqUywPA='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ECEFF3">
 <title>5호관 길찾기</title>
@@ -9,12 +11,12 @@
 // GitHub Pages lets phones keep this page for 10 minutes. Ask for the current build number (never cached)
 // and reopen at a fresh address if this copy is older. Sends nothing but the request for version.txt.
 (function () {
-  var BUILD = '7b41c214';
-  fetch('version.txt?' + Date.now(), { cache: 'no-store' })
+  var BUILD = '7826ecf78979';
+  fetch('version.txt', { cache: 'no-cache', credentials: 'omit', referrerPolicy: 'no-referrer' })
     .then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (v) {
       v = v.trim();
-      if (v && v !== BUILD && location.search.indexOf('v=' + v) < 0) location.replace(location.pathname + '?v=' + v + location.hash);
+      if (/^[a-f0-9]{8,16}$/.test(v) && v !== BUILD && location.search.indexOf('v=' + v) < 0) location.replace(location.pathname + '?v=' + v + location.hash);
     })
     .catch(function () { /* offline: keep what we have */ });
 })();
@@ -109,9 +111,15 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 .top > *, .sheet { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
+<link rel="stylesheet" href="photo-gallery.css?v=7826ecf78979">
+<link rel="stylesheet" href="language-ui.css?v=7826ecf78979">
+<link rel="stylesheet" href="fonts.css?v=7826ecf78979">
 </head>
 <body>
-<svg id="map" role="img" aria-label="인하대 캠퍼스 3D 지도"><g id="base"></g><g id="over"></g></svg>
+<div class="language-bar"><button id="language-toggle" class="language-toggle" type="button" aria-expanded="false" aria-controls="language-panel" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span lang="en">Language</span><span id="language-current" class="language-current">한국어</span><span aria-hidden="true">▾</span></button></div>
+<div id="language-panel" class="language-panel" role="dialog" aria-modal="true" aria-labelledby="language-title" hidden><header><h2 id="language-title" data-i18n="ui.language_choose">언어 선택</h2><button id="language-close" type="button" aria-label="닫기" data-i18n-aria="ui.language_close">×</button></header><p data-i18n="ui.language_note">언어를 바꿔도 현재 길찾기는 유지됩니다.</p><div id="language-options" class="language-options"></div></div>
+
+<svg id="map" role="img" aria-label="인하대 캠퍼스 3D 지도" data-i18n-aria="ui.map_label"><g id="base"></g><g id="over"></g></svg>
 
 <div class="top">
   <div class="instr" id="instr" hidden aria-live="polite">
@@ -119,72 +127,74 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
     <div class="dist" id="i-dist"></div>
     <div class="say" id="i-say"></div>
     <div class="meta"><span id="i-to"></span><span id="i-eta"></span></div>
-    <button class="thumb" id="i-photo" hidden aria-label="실제 사진 크게 보기"><img alt=""></button>
+    <button class="thumb" id="i-photo" hidden aria-label="실제 사진 크게 보기" data-i18n-aria="ui.photo_expand"><img alt=""></button>
   </div>
   <div class="banner" id="banner" hidden><span id="banner-text"></span><button id="banner-btn" hidden></button></div>
-  <span class="badge" id="sim-badge" hidden>시뮬레이션으로 걷는 중</span>
+  <span class="badge" id="sim-badge" hidden data-i18n="ui.sim_badge">시뮬레이션으로 걷는 중</span>
 </div>
 
 <div class="fabs" id="fabs">
-  <button class="fab" id="zoom-in" aria-label="확대">+</button>
-  <button class="fab" id="zoom-out" aria-label="축소">−</button>
-  <button class="fab" id="recenter" aria-label="현위치로" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
-  <button class="fab" id="compass" aria-label="내가 보는 방향 표시" hidden><svg viewBox="0 0 24 24"><path d="M12 3l5 16-5-3-5 3z" fill="currentColor"/></svg></button>
+  <button class="fab" id="zoom-in" aria-label="확대" data-i18n-aria="ui.zoom_in">+</button>
+  <button class="fab" id="zoom-out" aria-label="축소" data-i18n-aria="ui.zoom_out">−</button>
+  <button class="fab" id="recenter" aria-label="현위치로" hidden data-i18n-aria="ui.recenter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+  <button class="fab" id="compass" aria-label="내가 보는 방향 표시" hidden data-i18n-aria="ui.compass"><svg viewBox="0 0 24 24"><path d="M12 3l5 16-5-3-5 3z" fill="currentColor"/></svg></button>
 </div>
 
 <!-- 1. Start -->
 <section class="sheet" id="s-start">
-  <h1>5호관 어디로 가세요?</h1>
-  <p class="lead">5호관은 <b>5동·5서·5남·5북</b> 네 건물이라 <b>5남 309와 5동 309는 다른 방</b>이에요.</p>
+  <h1 data-i18n="ui.home_title">5호관 어디로 가세요?</h1>
+  <p class="lead" data-i18n="ui.home_intro">5호관은 5동·5서·5남·5북 네 건물이라 5남 309와 5동 309는 다른 방이에요.</p>
   <div class="field">
-    <input id="room" inputmode="text" autocomplete="off" aria-label="강의실 번호">
+    <input id="room" inputmode="text" autocomplete="off" aria-label="강의실 번호" data-i18n-aria="room_label">
     <span class="hint" id="room-hint"></span>
     <div class="minis" id="room-cands"></div>
   </div>
   <div class="minis" id="quick"></div>
   <div class="minis" id="tower-floors" hidden></div>
-  <button class="btn" id="go-gps" disabled>내 위치로 길찾기</button>
-  <div class="row"><button class="btn alt" id="go-manual" disabled>출발지 고르기</button><button class="btn alt" id="go-inside" disabled>이미 5호관 안</button></div>
-  <p class="note">위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않아요.</p>
+  <button class="btn" id="go-gps" disabled data-i18n="ui.gps_go">내 위치로 길찾기</button>
+  <div class="row"><button class="btn alt" id="go-manual" disabled data-i18n="ui.manual_go">출발지 고르기</button><button class="btn alt" id="go-inside" disabled data-i18n="ui.inside_go">이미 5호관 안</button></div>
+<details class="privacy-notice"><summary data-i18n="ui.privacy_title">개인정보·접속 기록</summary><p data-i18n="ui.privacy_body"></p><a data-i18n="ui.privacy_policy" href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noopener noreferrer">GitHub의 데이터 수집 안내</a></details>
+  <p class="note" data-i18n="ui.location_note">위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않아요.</p>
 </section>
 
 <!-- 2. Before asking for location -->
 <section class="sheet" id="s-ask" hidden>
-  <h2>내 위치를 지도에 표시할게요</h2>
-  <div class="privacy">이 페이지는 내 위치를 지도에 표시하기 위해 휴대폰의 위치 기능을 사용합니다. 위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않습니다. 언제든 브라우저 설정에서 위치 권한을 끌 수 있습니다.</div>
-  <p>다음 화면에서 <b>허용</b>을 눌러 주세요. 건물 사이에서는 위치가 10~30m 정도 틀릴 수 있어요.</p>
-  <button class="btn" id="ask-ok">위치 허용하고 시작</button>
-  <button class="btn alt" data-back>돌아가기</button>
+  <h2 data-i18n="ui.location_title">내 위치를 지도에 표시할게요</h2>
+  <div class="privacy" data-i18n="ui.location_privacy">이 페이지는 내 위치를 지도에 표시하기 위해 휴대폰의 위치 기능을 사용합니다. 위치는 이 휴대폰 화면에서만 쓰이고 서버로 전송되거나 저장되지 않습니다. 언제든 브라우저 설정에서 위치 권한을 끌 수 있습니다.</div>
+  <details class="privacy-notice"><summary data-i18n="ui.privacy_title">개인정보·접속 기록</summary><p data-i18n="ui.privacy_body"></p><a data-i18n="ui.privacy_policy" href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection" target="_blank" rel="noopener noreferrer">GitHub의 데이터 수집 안내</a></details>
+  <p data-i18n="ui.location_allow_hint">다음 화면에서 허용을 눌러 주세요. 건물 사이에서는 위치가 10~30m 정도 틀릴 수 있어요.</p>
+  <button class="btn" id="ask-ok" data-i18n="ui.location_allow">위치 허용하고 시작</button>
+  <button class="btn alt" data-back data-i18n="ui.back">돌아가기</button>
 </section>
 
 <!-- 3. Location refused -->
 <section class="sheet" id="s-denied" hidden>
-  <h2>위치를 쓸 수 없어요</h2>
-  <p id="denied-why">위치 권한이 꺼져 있어요. 다시 켜려면:</p>
+  <h2 data-i18n="ui.denied_title">위치를 쓸 수 없어요</h2>
+  <p id="denied-why" data-i18n="ui.denied_default">위치 권한이 꺼져 있어요. 다시 켜려면:</p>
   <ul class="steps" id="denied-steps"></ul>
-  <button class="btn" id="denied-manual">출발지 직접 고르기</button>
-  <button class="btn alt" id="denied-retry">다시 시도</button>
+  <button class="btn" id="denied-manual" data-i18n="ui.manual_pick">출발지 직접 고르기</button>
+  <button class="btn alt" id="denied-retry" data-i18n="ui.retry">다시 시도</button>
 </section>
 
 <!-- 4. Pick a start without GPS -->
 <section class="sheet" id="s-manual" hidden>
-  <h2>지금 어디에 있어요?</h2>
+  <h2 data-i18n="ui.where">지금 어디에 있어요?</h2>
   <div class="chips" id="starts"></div>
-  <button class="btn alt" data-back>돌아가기</button>
+  <button class="btn alt" data-back data-i18n="ui.back">돌아가기</button>
 </section>
 
 <!-- 5. Route ready (manual start) -->
 <section class="sheet" id="s-route" hidden>
   <h2 id="route-title"></h2>
   <p id="route-sub"></p>
-  <div class="row"><button class="btn alt" id="prev-step">이전 안내</button><button class="btn" id="next-step">다음 안내</button></div>
-  <button class="btn alt" id="simulate">걸어보기 (시뮬레이션)</button>
-  <button class="btn alt" data-back>처음으로</button>
+  <div class="row"><button class="btn alt" id="prev-step" data-i18n="ui.prev_instruction">이전 안내</button><button class="btn" id="next-step" data-i18n="ui.next_instruction">다음 안내</button></div>
+  <button class="btn alt" id="simulate" data-i18n="ui.simulate">걸어보기 (시뮬레이션)</button>
+  <button class="btn alt" data-back data-i18n="ui.home">처음으로</button>
 </section>
 
 <!-- 6. Navigating with GPS -->
 <section class="sheet" id="s-nav" hidden>
-  <div class="row"><button class="btn alt" id="nav-overview">전체 경로 보기</button><button class="btn alt" id="nav-stop">안내 끝내기</button></div>
+  <div class="row"><button class="btn alt" id="nav-overview" data-i18n="ui.overview">전체 경로 보기</button><button class="btn alt" id="nav-stop" data-i18n="ui.end">안내 끝내기</button></div>
 </section>
 
 <!-- 5b. Already inside 5호관 -->
@@ -200,35 +210,53 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
   <div class="minis" id="pick-floor"></div>
   <div class="minis" id="pick-wing"></div>
   <button class="btn" id="inside-go" disabled></button>
-  <button class="btn alt" data-back>처음으로</button>
+  <button class="btn alt" data-back data-i18n="ui.home">처음으로</button>
 </section>
 
 <!-- 5c. Indoor guidance -->
 <section class="sheet" id="s-indoor" hidden>
-  <div class="row"><button class="btn alt" id="in-prev">이전</button><button class="btn" id="in-next">다음</button></div>
+  <div class="step-photo" id="step-photo" hidden>
+    <strong class="step-photo-cue" id="step-photo-cue"></strong>
+    <div class="step-photo-body">
+      <img id="step-photo-image" alt="" decoding="async">
+      <div class="step-photo-copy">
+        <p class="step-photo-caption" id="step-photo-caption"></p>
+        <div class="step-photo-actions"><button type="button" id="step-photo-open" data-i18n="photo.open">크게 보기</button><button type="button" id="step-photo-compare" hidden data-i18n="photo.compare">같은 계단의 다른 방향</button></div>
+      </div>
+    </div>
+    <p class="step-photo-schematic" id="step-photo-schematic" hidden data-i18n="photo.schematic">계단 그림은 개략도예요. 실제 방향은 사진과 층 표지를 확인하세요.</p>
+  </div>
+  <div class="row"><button class="btn alt" id="in-prev" data-i18n="ui.prev">이전</button><button class="btn" id="in-next" data-i18n="ui.next">다음</button></div>
   <label class="check"><input type="checkbox" id="nw"> <span id="nw-label"></span></label>
-  <p class="note" id="in-note"></p>
-  <button class="btn alt" data-back>처음으로</button>
+  <details class="indoor-data-note"><summary data-i18n="ui.map_accuracy">지도 정확도 안내</summary><p class="note" id="in-note"></p></details>
+  <button class="btn alt" data-back data-i18n="ui.home">처음으로</button>
 </section>
 
 <div class="viewer" id="viewer" hidden><img alt=""><p></p></div>
 
 <!-- 6b. Far from campus -->
 <section class="sheet" id="s-far" hidden>
-  <h2>인하대 근처에서만 안내해요</h2>
+  <h2 data-i18n="ui.far_title">인하대 근처에서만 안내해요</h2>
   <p class="lead" id="far-dist"></p>
-  <p>인하대역(수인분당선)까지는 지도 앱으로 오시고, 캠퍼스 근처에서 다시 켜 주세요. 위치 확인은 멈췄어요.</p>
-  <button class="btn" id="far-manual">출발지 직접 고르기</button>
-  <div class="row"><button class="btn alt" id="far-retry">다시 확인</button><button class="btn alt" data-back>처음으로</button></div>
+  <p data-i18n="ui.far_help">인하대역(수인분당선)까지는 지도 앱으로 오시고, 캠퍼스 근처에서 다시 켜 주세요. 위치 확인은 멈췄어요.</p>
+  <button class="btn" id="far-manual" data-i18n="ui.manual_pick">출발지 직접 고르기</button>
+  <div class="row"><button class="btn alt" id="far-retry" data-i18n="ui.check_again">다시 확인</button><button class="btn alt" data-back data-i18n="ui.home">처음으로</button></div>
 </section>
 
 
-<span class="credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
+<span class="credit" data-i18n="ui.credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
-<script src="i18n.js?v=7b41c214"></script>
-<script src="campus-data.js?v=7b41c214"></script>
-<script src="indoor-data.js?v=7b41c214"></script>
-<script src="indoor.js?v=7b41c214"></script>
-<script src="app.js?v=7b41c214"></script>
+<script src="locales.js?v=7826ecf78979"></script>
+<script src="i18n.js?v=7826ecf78979"></script>
+<script src="campus-data.js?v=7826ecf78979"></script>
+<script src="indoor-data.js?v=7826ecf78979"></script>
+<script src="field-route-data.js?v=7826ecf78979"></script>
+<script src="indoor.js?v=7826ecf78979"></script>
+<script src="app.js?v=7826ecf78979"></script>
+<script src="photo-guides.js?v=7826ecf78979"></script>
+<script src="route-photo-data.js?v=7826ecf78979"></script>
+<script src="photo-gallery.js?v=7826ecf78979"></script>
+<script src="route-photos.js?v=7826ecf78979"></script>
+<script src="language-ui.js?v=7826ecf78979"></script>
 </body>
 </html>
