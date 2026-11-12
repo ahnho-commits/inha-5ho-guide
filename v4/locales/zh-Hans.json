@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "收起照片",
   "ui.route_details": "详细指引",
   "ui.route_hide_details": "收起指引",
-  "ui.photo_swipe_hint": "向上滑动可展开，向下滑动可收起，也可以点按按钮。"
+  "ui.photo_swipe_hint": "向上滑动可展开，向下滑动可收起，也可以点按按钮。",
+  "entry.manual": "我已在楼内",
+  "entry.near": "您已接近入口",
+  "entry.confirm": "{entrance} · 室内导航",
+  "entry.title": "您从哪个入口进入？",
+  "entry.help": "选择您进入的入口，即可继续导航至目的地。",
+  "entry.other_location": "从其他楼层或房间出发",
+  "entry.cancel": "我还在楼外",
+  "entry.resume": "返回室外导航",
+  "entry.auto": "您已接近入口，已开始室内导航。",
+  "entry.east_note": "60周年纪念馆对面的5E入口",
+  "entry.corner_note": "距侧门最近的入口 · 电梯前",
+  "entry.south_note": "钟楼下方的5S中央入口",
+  "nav.south_basement_pass_corner": "请勿在此下楼。沿1层走廊前往5S中央楼梯。"
 }

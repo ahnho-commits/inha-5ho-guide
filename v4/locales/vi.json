@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "Thu gọn ảnh",
   "ui.route_details": "Hướng dẫn chi tiết",
   "ui.route_hide_details": "Thu gọn hướng dẫn",
-  "ui.photo_swipe_hint": "Vuốt lên để mở rộng, vuốt xuống để thu gọn. Bạn cũng có thể nhấn nút."
+  "ui.photo_swipe_hint": "Vuốt lên để mở rộng, vuốt xuống để thu gọn. Bạn cũng có thể nhấn nút.",
+  "entry.manual": "Tôi đang ở trong tòa nhà",
+  "entry.near": "Bạn đang ở gần lối vào",
+  "entry.confirm": "{entrance} · Chỉ đường bên trong",
+  "entry.title": "Bạn đã vào bằng lối nào?",
+  "entry.help": "Chọn lối bạn đã vào để tiếp tục chỉ đường đến điểm đến.",
+  "entry.other_location": "Xuất phát từ tầng hoặc phòng khác",
+  "entry.cancel": "Tôi vẫn ở bên ngoài",
+  "entry.resume": "Quay lại chỉ đường bên ngoài",
+  "entry.auto": "Bạn đã đến gần lối vào. Đã bắt đầu chỉ đường bên trong.",
+  "entry.east_note": "Lối vào 5E đối diện Tòa nhà kỷ niệm 60 năm",
+  "entry.corner_note": "Lối vào gần cổng phụ nhất · Trước thang máy",
+  "entry.south_note": "Lối vào trung tâm 5S dưới tháp đồng hồ",
+  "nav.south_basement_pass_corner": "Không xuống cầu thang ở đây. Đi theo hành lang tầng 1 đến cầu thang trung tâm 5S."
 }

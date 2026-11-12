@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "写真を折りたたむ",
   "ui.route_details": "詳しい案内",
   "ui.route_hide_details": "案内を折りたたむ",
-  "ui.photo_swipe_hint": "上にスワイプすると開き、下にスワイプすると折りたためます。ボタンを押しても操作できます。"
+  "ui.photo_swipe_hint": "上にスワイプすると開き、下にスワイプすると折りたためます。ボタンを押しても操作できます。",
+  "entry.manual": "建物の中にいます",
+  "entry.near": "入口の近くです",
+  "entry.confirm": "{entrance} · 屋内案内",
+  "entry.title": "どの入口から入りましたか？",
+  "entry.help": "入った入口を選ぶと、目的地までの案内を続けます。",
+  "entry.other_location": "別の階・部屋から出発",
+  "entry.cancel": "まだ外にいます",
+  "entry.resume": "屋外案内に戻る",
+  "entry.auto": "入口に近づいたため、屋内案内を開始しました。",
+  "entry.east_note": "60周年記念館の向かいにある5Eの入口",
+  "entry.corner_note": "脇門から最も近い入口 · エレベーター前",
+  "entry.south_note": "時計塔の下にある5S中央入口",
+  "nav.south_basement_pass_corner": "ここでは下りず、1階の廊下を進んで5S中央階段へ向かってください。"
 }

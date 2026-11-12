@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "사진 접기",
   "ui.route_details": "자세한 안내",
   "ui.route_hide_details": "안내 접기",
-  "ui.photo_swipe_hint": "위로 밀면 펼쳐지고 아래로 밀면 접혀요. 버튼을 눌러도 돼요."
+  "ui.photo_swipe_hint": "위로 밀면 펼쳐지고 아래로 밀면 접혀요. 버튼을 눌러도 돼요.",
+  "entry.manual": "건물 안에 있어요",
+  "entry.near": "입구 근처예요",
+  "entry.confirm": "{entrance} · 실내 안내",
+  "entry.title": "어느 입구로 들어왔나요?",
+  "entry.help": "들어온 입구를 선택하면 목적지까지 이어서 안내해요.",
+  "entry.other_location": "다른 층·호실에서 시작",
+  "entry.cancel": "아직 밖이에요",
+  "entry.resume": "실외 안내로 돌아가기",
+  "entry.auto": "입구에 가까워져 실내 안내를 시작했어요.",
+  "entry.east_note": "60주년기념관 맞은편 5동 입구",
+  "entry.corner_note": "쪽문에서 가장 가까운 입구 · 엘리베이터 앞",
+  "entry.south_note": "시계탑 아래 5남 중앙 입구",
+  "nav.south_basement_pass_corner": "여기서는 내려가지 말고, 1층 복도를 따라 5남 중앙 계단으로 가세요."
 }

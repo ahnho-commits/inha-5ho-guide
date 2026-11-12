@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "Collapse photo",
   "ui.route_details": "Detailed directions",
   "ui.route_hide_details": "Hide details",
-  "ui.photo_swipe_hint": "Swipe up to expand or down to collapse. You can also tap the button."
+  "ui.photo_swipe_hint": "Swipe up to expand or down to collapse. You can also tap the button.",
+  "entry.manual": "I’m inside the building",
+  "entry.near": "You’re near an entrance",
+  "entry.confirm": "{entrance} · Indoor directions",
+  "entry.title": "Which entrance did you use?",
+  "entry.help": "Select the entrance you used to continue directions to your destination.",
+  "entry.other_location": "Start from another floor or room",
+  "entry.cancel": "I’m still outside",
+  "entry.resume": "Return to outdoor directions",
+  "entry.auto": "You’re near the entrance. Indoor directions have started.",
+  "entry.east_note": "5E entrance opposite the 60th Anniversary Hall",
+  "entry.corner_note": "Entrance closest to the side gate · By the elevator",
+  "entry.south_note": "Central 5S entrance under the clock tower",
+  "nav.south_basement_pass_corner": "Do not go downstairs here. Follow the 1F corridor to the central stairs in 5S."
 }

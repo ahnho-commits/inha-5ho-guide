@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-JQx09yKghuhi/O83W9NWQs+2x3y7E4wz/Y+y+SQrbo4='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-efJyNif/lxr5xt0dFdrAdwaW3UouJcNHxHhAPmo0LdY='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ECEFF3">
 <title>5호관 길찾기</title>
@@ -11,7 +11,7 @@
 // GitHub Pages lets phones keep this page for 10 minutes. Ask for the current build number (never cached)
 // and reopen at a fresh address if this copy is older. Sends nothing but the request for version.txt.
 (function () {
-  var BUILD = '49508e1a432e';
+  var BUILD = '7c9299c0c8f6';
   fetch('version.txt', { cache: 'no-cache', credentials: 'omit', referrerPolicy: 'no-referrer' })
     .then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (v) {
@@ -111,10 +111,11 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 .top > *, .sheet { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
-<link rel="stylesheet" href="photo-gallery.css?v=49508e1a432e">
-<link rel="stylesheet" href="language-ui.css?v=49508e1a432e">
-<link rel="stylesheet" href="fonts.css?v=49508e1a432e">
-<link rel="stylesheet" href="route-sheet.css?v=49508e1a432e">
+<link rel="stylesheet" href="photo-gallery.css?v=7c9299c0c8f6">
+<link rel="stylesheet" href="language-ui.css?v=7c9299c0c8f6">
+<link rel="stylesheet" href="fonts.css?v=7c9299c0c8f6">
+<link rel="stylesheet" href="route-sheet.css?v=7c9299c0c8f6">
+<link rel="stylesheet" href="entry-assist.css?v=7c9299c0c8f6">
 </head>
 <body>
 <div class="language-bar"><button id="language-toggle" class="language-toggle" type="button" aria-expanded="false" aria-controls="language-panel" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span lang="en">Language</span><span id="language-current" class="language-current">한국어</span><span aria-hidden="true">▾</span></button><button type="button" id="route-more-toggle" aria-expanded="false" aria-controls="route-more-panel" aria-haspopup="dialog" aria-label="더보기" data-i18n-aria="ui.route_more" hidden><span aria-hidden="true">⋯</span></button></div>
@@ -127,6 +128,7 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
     <div class="icon" id="i-icon"></div>
     <div class="dist" id="i-dist"></div>
     <div class="say" id="i-say"></div>
+    <div id="i-checkpoints" hidden><span id="i-checkpoints-route"></span><span id="i-checkpoints-wrong"></span></div>
     <button type="button" id="route-detail-toggle" aria-expanded="false" aria-controls="i-to" hidden><span data-i18n="ui.route_details">자세한 안내</span><span aria-hidden="true">↓</span></button>
     <div class="meta"><span id="i-to"></span><span id="i-eta"></span></div>
     <button class="thumb" id="i-photo" hidden aria-label="실제 사진 크게 보기" data-i18n-aria="ui.photo_expand"><img alt=""></button>
@@ -174,7 +176,8 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
   <h2 data-i18n="ui.denied_title">위치를 쓸 수 없어요</h2>
   <p id="denied-why" data-i18n="ui.denied_default">위치 권한이 꺼져 있어요. 다시 켜려면:</p>
   <ul class="steps" id="denied-steps"></ul>
-  <button class="btn" id="denied-manual" data-i18n="ui.manual_pick">출발지 직접 고르기</button>
+  <button class="btn" id="denied-inside" data-i18n="entry.manual">건물 안에 있어요</button>
+  <button class="btn alt" id="denied-manual" data-i18n="ui.manual_pick">출발지 직접 고르기</button>
   <button class="btn alt" id="denied-retry" data-i18n="ui.retry">다시 시도</button>
 </section>
 
@@ -196,7 +199,17 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 
 <!-- 6. Navigating with GPS -->
 <section class="sheet" id="s-nav" hidden>
+  <div id="entry-near" hidden><span class="label" data-i18n="entry.near">입구 근처예요</span><button class="btn" id="entry-near-confirm"></button></div>
+  <button class="btn alt" id="nav-inside" data-i18n="entry.manual">건물 안에 있어요</button>
   <div class="row"><button class="btn alt" id="nav-overview" data-i18n="ui.overview">전체 경로 보기</button><button class="btn alt" id="nav-stop" data-i18n="ui.end">안내 끝내기</button></div>
+</section>
+
+<section class="sheet" id="s-entry" hidden aria-labelledby="entry-title">
+  <h2 id="entry-title" data-i18n="entry.title">어느 입구로 들어왔나요?</h2>
+  <p data-i18n="entry.help">들어온 입구를 선택하면 목적지까지 이어서 안내해요.</p>
+  <div id="entry-options" class="chips"></div>
+  <button class="btn alt" id="entry-other" data-i18n="entry.other_location">다른 층·호실에서 시작</button>
+  <button class="btn alt" id="entry-cancel" data-i18n="entry.cancel">아직 밖이에요</button>
 </section>
 
 <!-- 5b. Already inside 5호관 -->
@@ -243,6 +256,7 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
  <section id="route-more-panel" role="dialog" aria-modal="true" aria-labelledby="route-more-title">
   <header><h2 id="route-more-title" data-i18n="ui.route_more">더보기</h2><button type="button" id="route-more-close" aria-label="닫기" data-i18n-aria="photo.close">×</button></header>
   <label class="check"><input type="checkbox" id="nw"> <span id="nw-label"></span></label>
+  <button class="btn alt" id="entry-resume" hidden data-i18n="entry.resume">실외 안내로 돌아가기</button>
   <details class="indoor-data-note"><summary data-i18n="ui.map_accuracy">지도 정확도 안내</summary><p class="note" id="in-note"></p></details>
   <button class="btn alt" data-back data-i18n="ui.home">처음으로</button>
  </section>
@@ -262,18 +276,19 @@ svg .lbl { paint-order: stroke; stroke: var(--card); stroke-linejoin: round; }
 
 <span class="credit" data-i18n="ui.credit">© OpenStreetMap 기여자 · 수업 프로토타입(비공식)</span>
 
-<script src="locales.js?v=49508e1a432e"></script>
-<script src="i18n.js?v=49508e1a432e"></script>
-<script src="campus-data.js?v=49508e1a432e"></script>
-<script src="indoor-data.js?v=49508e1a432e"></script>
-<script src="field-route-data.js?v=49508e1a432e"></script>
-<script src="indoor.js?v=49508e1a432e"></script>
-<script src="app.js?v=49508e1a432e"></script>
-<script src="photo-guides.js?v=49508e1a432e"></script>
-<script src="route-photo-data.js?v=49508e1a432e"></script>
-<script src="photo-gallery.js?v=49508e1a432e"></script>
-<script src="route-photos.js?v=49508e1a432e"></script>
-<script src="route-sheet.js?v=49508e1a432e"></script>
-<script src="language-ui.js?v=49508e1a432e"></script>
+<script src="locales.js?v=7c9299c0c8f6"></script>
+<script src="i18n.js?v=7c9299c0c8f6"></script>
+<script src="campus-data.js?v=7c9299c0c8f6"></script>
+<script src="indoor-data.js?v=7c9299c0c8f6"></script>
+<script src="field-route-data.js?v=7c9299c0c8f6"></script>
+<script src="indoor.js?v=7c9299c0c8f6"></script>
+<script src="entry-assist.js?v=7c9299c0c8f6"></script>
+<script src="app.js?v=7c9299c0c8f6"></script>
+<script src="photo-guides.js?v=7c9299c0c8f6"></script>
+<script src="route-photo-data.js?v=7c9299c0c8f6"></script>
+<script src="photo-gallery.js?v=7c9299c0c8f6"></script>
+<script src="route-photos.js?v=7c9299c0c8f6"></script>
+<script src="route-sheet.js?v=7c9299c0c8f6"></script>
+<script src="language-ui.js?v=7c9299c0c8f6"></script>
 </body>
 </html>

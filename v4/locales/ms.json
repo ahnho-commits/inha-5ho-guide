@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "Kecilkan foto",
   "ui.route_details": "Arahan terperinci",
   "ui.route_hide_details": "Tutup butiran",
-  "ui.photo_swipe_hint": "Leret ke atas untuk membesarkan atau ke bawah untuk mengecilkan. Anda juga boleh mengetik butang."
+  "ui.photo_swipe_hint": "Leret ke atas untuk membesarkan atau ke bawah untuk mengecilkan. Anda juga boleh mengetik butang.",
+  "entry.manual": "Saya sudah di dalam bangunan",
+  "entry.near": "Anda berada berhampiran pintu masuk",
+  "entry.confirm": "{entrance} · Panduan dalam bangunan",
+  "entry.title": "Anda masuk melalui pintu yang mana?",
+  "entry.help": "Pilih pintu yang anda gunakan untuk meneruskan panduan ke destinasi.",
+  "entry.other_location": "Mula dari aras atau bilik lain",
+  "entry.cancel": "Saya masih di luar",
+  "entry.resume": "Kembali ke panduan luar bangunan",
+  "entry.auto": "Anda menghampiri pintu masuk. Panduan dalam bangunan telah bermula.",
+  "entry.east_note": "Pintu masuk 5E bertentangan Dewan Ulang Tahun Ke-60",
+  "entry.corner_note": "Pintu masuk paling dekat dengan pintu pagar sisi · Di hadapan lif",
+  "entry.south_note": "Pintu masuk tengah 5S di bawah menara jam",
+  "nav.south_basement_pass_corner": "Jangan turun di sini. Ikut koridor aras 1 menuju tangga tengah 5S."
 }

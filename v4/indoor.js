@@ -69,6 +69,13 @@ const Indoor = (() => {
   // data also contains a room-to-room 5F/3F link; it is not a usable stair.
   const isConnector = n => n.kind === 'stair' || n.id.startsWith('T:') || n.id === 'B1S:clubs';
   const isFloorLink = (a, b) => Math.abs(a.f - b.f) === 1 && isConnector(a) && isConnector(b);
+  // Use the actual consecutive floor-changing edge, not a staircase merely
+  // passed earlier in the step, as the position of a rendered connector.
+  const floorChanges = ids => ids.slice(1).flatMap((id, i) => {
+    const a = node(ids[i]), b = node(id);
+    return a && b && a.f !== b.f && isFloorLink(a, b) ? [[a, b]] : [];
+  });
+  const connectorAnchor = st => floorChanges(st.ids).find(([a]) => a.f === st.from)?.[0];
 
   function search(from, nw, allow, target) {
     const D = new Map([[from, 0]]), prev = new Map(), done = new Set();
@@ -364,9 +371,11 @@ const Indoor = (() => {
   function liftShaft(x, y, f1, f2, now, k) {
     const z0 = zOf(Math.min(f1, f2)), z1 = zOf(Math.max(f1, f2)), r = 3.5;
     const [lx, ly] = iso(x + r, y + r, z1);
-    return `<g opacity="${now ? 1 : .35}"><polygon fill="var(--accent-soft)" fill-opacity=".75" stroke="var(--route)" stroke-width=".5" points="${P(x - r, y + r, z1)} ${P(x + r, y + r, z1)} ${P(x + r, y + r, z0)} ${P(x - r, y + r, z0)}"/>`
-      + `<polygon fill="var(--main-side)" fill-opacity=".6" stroke="var(--route)" stroke-width=".5" points="${P(x + r, y - r, z1)} ${P(x + r, y + r, z1)} ${P(x + r, y + r, z0)} ${P(x + r, y - r, z0)}"/>`
-      + `<text x="${lx + 3 * k}" y="${ly + 14 * k}" font-size="${11 * k}" font-weight="800" fill="var(--route)">EV</text></g>`;
+    const face = now ? 'var(--accent-soft)' : 'var(--b-top)', side = now ? 'var(--main-side)' : 'var(--b-side)';
+    const edge = now ? 'var(--route)' : 'var(--b-line)', labelColor = now ? 'var(--route)' : 'var(--muted)';
+    return `<g opacity="${now ? 1 : .35}"><polygon fill="${face}" fill-opacity=".75" stroke="${edge}" stroke-width=".5" points="${P(x - r, y + r, z1)} ${P(x + r, y + r, z1)} ${P(x + r, y + r, z0)} ${P(x - r, y + r, z0)}"/>`
+      + `<polygon fill="${side}" fill-opacity=".6" stroke="${edge}" stroke-width=".5" points="${P(x + r, y - r, z1)} ${P(x + r, y + r, z1)} ${P(x + r, y + r, z0)} ${P(x + r, y - r, z0)}"/>`
+      + `<text x="${lx + 3 * k}" y="${ly + 14 * k}" font-size="${11 * k}" font-weight="800" fill="${labelColor}">EV</text></g>`;
   }
 
   function drawIso(k, plan, stepIdx, bounds = null) {
@@ -425,7 +434,7 @@ const Indoor = (() => {
     for (const id of [start, end]) if (node(id).f === cur.f) keep.push([node(id).x, node(id).y, zOf(cur.f)]);
     const shaftBoxes = [];
     if (cur.from !== undefined) {
-      const a = cur.ids.map(node).find(n => n.kind === 'stair' && n.f === cur.from) || node(cur.ids[0]);
+      const a = connectorAnchor(cur) || node(cur.ids[0]);
       const [rx, ry] = cur.lift ? [4, 4] : [9, 5.5];
       const corners = [];
       for (const dx of [-rx, rx]) for (const dy of [-ry, ry]) for (const f of [cur.from, cur.f]) corners.push(iso(a.x + dx, a.y + dy, zOf(f)));
@@ -467,12 +476,22 @@ const Indoor = (() => {
       const sh = floorShapes(f)[0], [fx, fy] = iso(sh.x0, sh.y0, z);
       s += `<text class="lbl" x="${fx - 14 * k}" y="${fy + 6 * k}" font-size="${18 * k}" font-weight="800" fill="var(--route)" stroke-width="${3 * k}" text-anchor="end">${floorName(f)}</text>`;
     }
-    // Stairs and the lift for every floor change on the way; the current one solid.
+    // A landing along a walk is not a stair instruction. Highlight only the
+    // floor-changing edges actually traversed by this route and this step.
+    // Keep other connectors neutral, including a lift waiting in a later step.
+    const floorEdges = ids => floorChanges(ids).map(([a, b]) => JSON.stringify([a.id, b.id]));
+    const traversed = new Set(floorEdges(plan.path)), currentEdges = new Set(floorEdges(cur.ids));
     plan.steps.forEach((st, i) => {
       if (st.from === undefined || st.connectorDuplicate) return;
-      const anchor = st.ids.map(node).find(n => n.kind === 'stair' && n.f === st.from) || node(st.ids[0]);
-      const active = i === stepIdx || (!!st.connectorGroup && st.connectorGroup === cur.connectorGroup);
+      const edges = floorEdges(st.ids), onRoute = edges.length > 0 && edges.every(edge => traversed.has(edge));
+      const anchor = connectorAnchor(st);
+      if (!anchor) return;
+      const sameConnector = st.connectorGroup && st.connectorGroup === cur.connectorGroup && edges.some(edge => currentEdges.has(edge));
+      const active = onRoute && (i === stepIdx || !!sameConnector);
+      const name = svgText(anchor.id).replace(/"/g, '&quot;');
+      s += `<g data-connector="${st.lift ? 'lift' : 'stairs'}" data-connector-node="${name}" data-route-connector="${onRoute}" data-connector-active="${active}">`;
       s += st.lift ? liftShaft(anchor.x, anchor.y, st.from, st.f, active, k) : staircase(anchor.x, anchor.y, st.from, st.f, active);
+      s += '</g>';
     });
     // Route on the floor you're looking at: this step bold, the rest of this floor faint. Floor changes are the stairs above.
     for (const run of sameFloor(plan.path)) {
@@ -538,7 +557,7 @@ const Indoor = (() => {
     const cur = plan.steps[stepIdx], pts = [];
     if (cur.from !== undefined) {
       // floor change: close in on the stairs (or lift) so their shape is readable
-      const a = cur.ids.map(node).find(n => n.kind === 'stair' && n.f === cur.from) || node(cur.ids[0]);
+      const a = connectorAnchor(cur) || node(cur.ids[0]);
       for (const f of [cur.from, cur.f]) for (const [dx, dy] of [[-22, -22], [22, -22], [22, 22], [-22, 22]]) pts.push(iso(a.x + dx, a.y + dy, zOf(f)));
       return pts;
     }

@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "Perkecil foto",
   "ui.route_details": "Lihat rincian",
   "ui.route_hide_details": "Tutup rincian",
-  "ui.photo_swipe_hint": "Geser ke atas untuk memperbesar atau ke bawah untuk memperkecil. Anda juga dapat mengetuk tombol."
+  "ui.photo_swipe_hint": "Geser ke atas untuk memperbesar atau ke bawah untuk memperkecil. Anda juga dapat mengetuk tombol.",
+  "entry.manual": "Saya sudah di dalam gedung",
+  "entry.near": "Anda berada di dekat pintu masuk",
+  "entry.confirm": "{entrance} · Petunjuk di dalam gedung",
+  "entry.title": "Anda masuk melalui pintu mana?",
+  "entry.help": "Pilih pintu yang Anda gunakan untuk melanjutkan petunjuk ke tujuan.",
+  "entry.other_location": "Mulai dari lantai atau ruang lain",
+  "entry.cancel": "Saya masih di luar",
+  "entry.resume": "Kembali ke petunjuk di luar gedung",
+  "entry.auto": "Anda mendekati pintu masuk. Petunjuk di dalam gedung telah dimulai.",
+  "entry.east_note": "Pintu masuk 5E di seberang Gedung Peringatan 60 Tahun",
+  "entry.corner_note": "Pintu masuk terdekat dari gerbang samping · Di depan lift",
+  "entry.south_note": "Pintu masuk tengah 5S di bawah menara jam",
+  "nav.south_basement_pass_corner": "Jangan turun di sini. Ikuti koridor lantai 1 menuju tangga tengah 5S."
 }

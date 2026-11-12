@@ -127,6 +127,7 @@ function buildRoute(from, destKey, startName) {
 }
 
 function pointAt(r, s) {
+  if (r.pts.length < 2 || r.total === 0) return r.pts[0];
   s = Math.max(0, Math.min(r.total, s));
   let i = 1;
   while (i < r.cum.length - 1 && r.cum[i] < s) i++;
@@ -507,7 +508,7 @@ function centerOnMe() {
 let selectedDest = 'south', mode = null;
 // target: the indoor node we are heading for. phase: outdoor map or indoor floor plan.
 let target = null, phase = 'outdoor', plan = null, inStep = 0, indoorFrom = null;
-const SHEETS = ['s-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-inside', 's-indoor'];
+const SHEETS = ['s-entry', 's-start', 's-ask', 's-denied', 's-manual', 's-route', 's-nav', 's-far', 's-inside', 's-indoor'];
 function sheet(id) {
   for (const s of SHEETS) $(s).hidden = s !== id;
   if (typeof RouteSheet !== 'undefined') RouteSheet.sync();
@@ -570,6 +571,7 @@ $('i-photo').onclick = () => {
 };
 $('viewer').onclick = () => { $('viewer').hidden = true; };
 function showInstr(step, distM) {
+  $('i-checkpoints').hidden = true;
   $('instr').hidden = false;
   setPhoto(step.photo);
   $('i-icon').innerHTML = iconSvg(step.dir);
@@ -643,6 +645,8 @@ function renderStarts() {
 }
 
 function reset() {
+  entryReturn = null; nearEntrance = null; entryApproach.reset();
+  $('entry-resume').hidden = true; $('entry-near').hidden = true;
   phase = 'outdoor';
   plan = null;
   stopGPS();
@@ -677,6 +681,7 @@ function watchGPS() {
 }
 function startGPS() {
   if (phase !== 'outdoor') return;
+  entryApproach.reset(); entryReturn = null; nearEntrance = null; renderEntryAssist();
   stopGPS();
   stopCompass();
   stopSim();
@@ -705,7 +710,7 @@ function onPos(pos) {
   const p = project(latitude, longitude);
   gotFix = true;
   if (!inArea(p, 150)) return outsideArea(latitude, longitude);
-  handleFix(p, accuracy);
+  handleFix(p, accuracy, pos.timestamp || Date.now());
 }
 // Great-circle distance, so someone opening this abroad still gets a sensible number.
 function kmToCampus(lat, lon) {
@@ -715,6 +720,7 @@ function kmToCampus(lat, lon) {
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 }
 function outsideArea(lat, lon) {
+  nearEntrance = null; renderEntryAssist();
   const km = kmToCampus(lat, lon);
   const far = km < 1 ? `${Math.round(km * 100) * 10}m` : `${km.toFixed(1)}km`;
   route = null;
@@ -736,6 +742,7 @@ function outsideArea(lat, lon) {
   fit(Object.values(C.pois).map(v => v.p));
 }
 function onPosError(err) {
+  nearEntrance = null; renderEntryAssist();
   if (err.code === 1) {
     stopGPS();
     const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -769,7 +776,7 @@ function inArea(p, margin) {
   return p[0] > x0 - margin && p[0] < x1 + margin && p[1] > y0 - margin && p[1] < y1 + margin;
 }
 
-function handleFix(p, acc) {
+function handleFix(p, acc, timestamp = Date.now()) {
   gotFix = true;
   me = { p, acc };
   if (mode === 'gps') {
@@ -785,10 +792,23 @@ function handleFix(p, acc) {
     overview();
     setTimeout(() => { if (follow && me) centerOnMe(); }, 1200);
   }
+  if (mode === 'gps') {
+    const evidence = entryApproach.update(p, acc, ENTRY_POINTS, route.dest, timestamp);
+    nearEntrance = evidence.near;
+    renderEntryAssist();
+    if (evidence.auto) return arrive();
+  }
   updateProgress(p, acc);
 }
 
 function updateProgress(p, acc) {
+  if (route.pts.length < 2 || route.total === 0) {
+    if (mode === 'sim') return arrive();
+    progress = 0;
+    const st = nextStepFrom(0); showInstr(st, 0);
+    if (follow) centerOnMe(); else draw();
+    return;
+  }
   let best = null;
   for (let i = 1; i < route.pts.length; i++) {
     const r = nearestOnSegment(p, route.pts[i - 1], route.pts[i]);
@@ -801,7 +821,6 @@ function updateProgress(p, acc) {
       offCount = 0;
       route = buildRoute(p, selectedDest, '');
       progress = 0;
-      if (navigator.vibrate) navigator.vibrate(120);
       banner(() => t('app.gps.rerouted'));
       setTimeout(() => banner(''), 3000);
       return updateProgress(p, acc);
@@ -809,22 +828,95 @@ function updateProgress(p, acc) {
   } else offCount = 0;
   progress = Math.max(progress, best.s);
   const remain = route.total - progress;
-  if (remain < ARRIVE_M) return arrive();
+  if (mode === 'sim' && remain < ARRIVE_M) return arrive();
   const st = nextStepFrom(progress);
   showInstr(st, st.at - progress);
   if (follow) centerOnMe(); else draw();
 }
 
 function arrive() {
+  const wasGPS = mode === 'gps';
+  if (wasGPS) rememberEntryReturn();
   stopGPS();
   stopSim();
   progress = route.total;
-  if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
-  // Outside leg done: carry straight on with the floors inside.
   enterIndoor('ENT:' + route.dest);
-  banner(() => t('arrived_banner', { entrance: localName(C.pois['dest:' + route.dest].name) }));
-  setTimeout(() => banner(''), 4000);
+  if (wasGPS) {
+    banner(() => t('entry.auto'), () => t('entry.cancel'), resumeOutdoor);
+    const notice = bannerMessage;
+    setTimeout(() => { if (bannerMessage === notice) banner(''); }, 8000);
+  }
+  else {
+    banner(() => t('arrived_banner', { entrance: localName(C.pois['dest:' + route.dest].name) }));
+    setTimeout(() => banner(''), 4000);
+  }
 }
+
+// Entry selection stays local and keeps the destination, route and language.
+const ENTRY_POINTS = Object.fromEntries(['south', 'corner', 'east'].map(key => [key, C.pois['dest:' + key].p]));
+const entryApproach = EntryApproach.create();
+let nearEntrance = null, entryReturn = null, entryOptionsLanguage = null;
+function renderEntryAssist() {
+  $('entry-near').hidden = !nearEntrance;
+  $('entry-near-confirm').textContent = nearEntrance ? t('entry.confirm', { entrance: localName(C.pois['dest:' + nearEntrance].name) }) : '';
+  // GPS fixes update proximity, but entry labels only change with the language.
+  if (entryOptionsLanguage !== LANG) {
+    $('entry-options').replaceChildren(...['south', 'corner', 'east'].map(key => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'entry-option';
+      const name = document.createElement('strong'), note = document.createElement('small'), arrow = document.createElement('span');
+      name.textContent = localName(C.pois['dest:' + key].name);
+      note.textContent = t('entry.' + key + '_note');
+      arrow.textContent = '→'; arrow.setAttribute('aria-hidden', 'true');
+      button.append(name, note, arrow);
+      button.onclick = () => confirmEntry(key);
+      return button;
+    }));
+    entryOptionsLanguage = LANG;
+  }
+  $('entry-resume').hidden = !entryReturn;
+}
+function rememberEntryReturn() {
+  if (!entryReturn) entryReturn = { mode, route, me, progress, selectedDest, compassEnabled };
+}
+function chooseEntry() {
+  if (!target || phase !== 'outdoor') return;
+  rememberEntryReturn();
+  stopGPS(); stopSim(); mode = 'entry'; syncCompass();
+  $('instr').hidden = true; $('compass').hidden = true; $('recenter').hidden = true;
+  banner(''); renderEntryAssist(); sheet('s-entry');
+}
+function confirmEntry(key) {
+  if (!target || !Object.hasOwn(ENTRY_POINTS, key)) return;
+  rememberEntryReturn();
+  enterIndoor('ENT:' + key);
+  renderEntryAssist();
+}
+function resumeOutdoor() {
+  if (!entryReturn) return;
+  const saved = entryReturn;
+  stopGPS(); stopCompass(); stopSim();
+  phase = 'outdoor'; plan = null; inStep = 0; indoorFrom = null;
+  route = saved.route; me = saved.me; progress = saved.progress; selectedDest = saved.selectedDest;
+  mode = saved.mode; entryReturn = null; nearEntrance = null; entryApproach.inhibit();
+  $('entry-resume').hidden = true; $('entry-near').hidden = true;
+  $('route-more-overlay').hidden = true; $('route-more-toggle').setAttribute('aria-expanded', 'false');
+  banner('');
+  if (mode === 'gps') {
+    sheet('s-nav');
+    compassEnabled = saved.compassEnabled; $('compass').hidden = compassEnabled;
+    watchGPS(); syncCompass();
+    if (route) { const st = nextStepFrom(progress); showInstr(st, st.at - progress); }
+    else { $('instr').hidden = true; banner(() => t('app.gps.searching')); }
+  } else { mode = null; sheet('s-start'); $('instr').hidden = true; }
+  overview();
+}
+$('nav-inside').onclick = chooseEntry;
+$('denied-inside').onclick = chooseEntry;
+$('entry-near-confirm').onclick = () => { if (nearEntrance) confirmEntry(nearEntrance); };
+$('entry-cancel').onclick = resumeOutdoor;
+$('entry-resume').onclick = resumeOutdoor;
+$('entry-other').onclick = openInside;
 
 // ---------- compass ----------
 const compassEvent = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
@@ -1008,6 +1100,7 @@ function enterIndoor(from) {
   $('compass').hidden = true;
   $('recenter').hidden = true;
   $('sim-badge').hidden = true;
+  $('entry-resume').hidden = !entryReturn;
   $('nw-label').textContent = t('nw_toggle');
   $('in-note').textContent = t('data_note');
   sheet('s-indoor');
@@ -1019,6 +1112,15 @@ function showIndoor() {
   $('i-icon').innerHTML = iconSvg(st.icon);
   $('i-dist').textContent = st.from !== undefined ? `${Indoor.floorName(st.from)} → ${Indoor.floorName(st.f)}` : Indoor.floorName(st.f);
   $('i-say').textContent = st.title;
+  const checkpoints = (st.checks || []).map(id => Indoor.node(id)).filter(n => n?.kind === 'room');
+  const door = n => n.id.slice(2).replace(' (화장실)', '');
+  $('i-checkpoints').hidden = checkpoints.length < 2;
+  $('i-checkpoints-route').textContent = checkpoints.length > 1 ? t('step_checks', { list: checkpoints.map(door).join(' → ') }) : '';
+  const passBasementStairs = target.id === 'B1S:clubs' && st.f === 1 && st.from === undefined
+    && st.ids.includes('5E101') && st.ids.includes('5S151');
+  $('i-checkpoints-wrong').hidden = !st.wrong && !passBasementStairs;
+  $('i-checkpoints-wrong').textContent = passBasementStairs ? t('nav.south_basement_pass_corner')
+    : st.wrong ? t('step_wrong', { room: door(Indoor.node(st.wrong)) }) : '';
   setPhoto(st.photo);
   RoutePhotos.render(st, inStep, plan.steps);
   $('i-to').textContent = st.sub;
@@ -1103,6 +1205,7 @@ function refreshAppLanguage() {
   renderQuick();
   renderStarts();
   renderInsidePicks();
+  renderEntryAssist();
   renderDenied();
   if (farMessage) $('far-dist').textContent = farMessage();
   renderBanner();

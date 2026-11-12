@@ -2,7 +2,7 @@
   "status": "pass",
   "locales": {
     "ko": {
-      "required_codepoints": 475,
+      "required_codepoints": 478,
       "cjk_region": "kr",
       "missing_codepoints": []
     },
@@ -57,7 +57,7 @@
       "missing_codepoints": []
     }
   },
-  "total_asset_bytes": 1059868,
+  "total_asset_bytes": 1060628,
   "source_commits": {
     "noto-cjk": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
     "noto-fonts": "ffebf8c1ee449e544955a7e813c54f9b73848eac"
@@ -156,10 +156,10 @@
       "file": "guide-cjk-kr-regular.woff2",
       "family": "Guide CJK KR",
       "style": "Regular",
-      "bytes": 36920,
-      "sha256": "a8a84407e4f07bdecf072b0b353c77ddb171906b8fd62b6ce88cd33ec9720d58",
+      "bytes": 37196,
+      "sha256": "9d9e7693d4578656d7833b122e681f1fa9183d9485570109f0498c7792e8bb7d",
       "source": "NotoSansCJKkr-Regular.otf",
-      "codepoints": 355
+      "codepoints": 358
     },
     {
       "file": "guide-cjk-sc-regular.woff2",
@@ -201,10 +201,10 @@
       "file": "guide-cjk-kr-bold.woff2",
       "family": "Guide CJK KR",
       "style": "Bold",
-      "bytes": 37496,
-      "sha256": "e2141cdeceb05bea791746dd6da055b57b4656c77786ba55e6755ee8f757a77c",
+      "bytes": 37980,
+      "sha256": "fa895d5a36d9d8f43bc9c330ca77b487ee50739a0fac2455eda90ad863941d32",
       "source": "NotoSansCJKkr-Bold.otf",
-      "codepoints": 355
+      "codepoints": 358
     },
     {
       "file": "guide-cjk-sc-bold.woff2",
@@ -244,17 +244,17 @@
     }
   ],
   "catalog_sha256": {
-    "ko": "e2fe19047332644c9c4372da726e356b61ee0ba6bad2a38dfe744b8373a97a73",
-    "en": "616b7b104fee332c1dc9802ed0819670f3974f43d41d04428665601fbb1bd457",
-    "zh-Hans": "21dcb1e98265ab1de41a20686c6737537e12b2ef5f548077b3cc7193df58a4bb",
-    "vi": "61b4fd612ca904a6d8cb8608f231cd10099b661bd94bc698a127e9ee0a824a10",
-    "ru": "16d68fb3869376f6f5472d3f47e950a05321500a096df06cf11339c4628d189a",
-    "uz": "9f98bd94866237d1ee85569a096d986e1f9bde385fa51c5e0cfb4e8ff0d42348",
-    "mn": "502dcb9cfbbf0282f044091588ec0813bebe58bbd7b766a1fe4eea4f5e145615",
-    "ja": "e37a48e22d0e0b0717e12c692dae00a88cc266e8b17f805dedc5ab6f78ed4e81",
-    "zh-Hant": "3df6a2046c57395c36c1b5a73f3174af6a72c6cc8ec8b5a911dc225ded7a4915",
-    "id": "1d08d5028ee8e02ff234553ac3a8c6fd6e7bd7d96e8003ccc0a8fdfac82469ce",
-    "ms": "fcde941f1a73aa9d57e90770bca136551e8edd4fc353dd70fda7a84229a715cc"
+    "ko": "0c0c0f3e4d1b87b008c56e60d8b369ea884f61f08b0fd129ec15a395fd8fca23",
+    "en": "a2cf0f3dc67f4033c59e58867e6e33237a2ca77c1666e96fd02f03d74c18c79c",
+    "zh-Hans": "0ef0e46f126b1be36da89e4d37470e6d879cc5d22fb05900b43efb74ba4efba4",
+    "vi": "27d0ab8eaa66560d15dd9f1065184924c28a4c1a6b5d1d1e75b0ad40b626582e",
+    "ru": "73b9b20beea88ae624de590a42893febf04edee69e007e268edf7d453e251181",
+    "uz": "e514bc6c61209d346613c5147c40973d78f41c9f371ce8967877dd00a4154ee1",
+    "mn": "b4b94696318c5debbd1c2cf51b02abf1cab62430fac5e424ed2570b8908bb695",
+    "ja": "4c5b9134ac7c02ab5ddc8726696d88e2ea067bbe8547e0a9244f3444ed64d2de",
+    "zh-Hant": "8a4a96afb833ae8b6498c2e3477303899b4942be86b74f07f047ade73bfa9895",
+    "id": "971cfc84e1a438e5ad4551c23642245113b274497a53f7811d74e965bf431b74",
+    "ms": "b07d633948dbca4fd9c76e6e8b34c4d60284a926798488d3256007698114dbee"
   },
   "build_tools": {
     "fontTools": "4.68.0",

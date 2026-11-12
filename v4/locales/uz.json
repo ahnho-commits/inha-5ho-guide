@@ -298,5 +298,18 @@
   "ui.route_photo_collapse": "Suratni yig‘ish",
   "ui.route_details": "Batafsil yo‘riqnoma",
   "ui.route_hide_details": "Yo‘riqnomani yig‘ish",
-  "ui.photo_swipe_hint": "Ochish uchun yuqoriga, yig‘ish uchun pastga suring. Tugmani ham bosishingiz mumkin."
+  "ui.photo_swipe_hint": "Ochish uchun yuqoriga, yig‘ish uchun pastga suring. Tugmani ham bosishingiz mumkin.",
+  "entry.manual": "Men bino ichidaman",
+  "entry.near": "Kirish joyiga yaqinsiz",
+  "entry.confirm": "{entrance} · Bino ichidagi yo‘l",
+  "entry.title": "Qaysi kirish joyidan kirdingiz?",
+  "entry.help": "Manzilgacha yo‘l ko‘rsatishni davom ettirish uchun kirgan joyingizni tanlang.",
+  "entry.other_location": "Boshqa qavat yoki xonadan boshlash",
+  "entry.cancel": "Men hali tashqaridaman",
+  "entry.resume": "Tashqaridagi yo‘l ko‘rsatishga qaytish",
+  "entry.auto": "Kirish joyiga yaqinlashdingiz. Bino ichida yo‘l ko‘rsatish boshlandi.",
+  "entry.east_note": "60 yillik yubiley binosi qarshisidagi 5E kirish joyi",
+  "entry.corner_note": "Yon darvozaga eng yaqin kirish joyi · Lift oldida",
+  "entry.south_note": "Soat minorasi ostidagi markaziy 5S kirish joyi",
+  "nav.south_basement_pass_corner": "Bu yerda pastga tushmang. 1-qavat yo‘lagi bo‘ylab 5S markaziy zinapoyasiga boring."
 }

@@ -1,0 +1,21 @@
+/* Compact entry controls share the existing sheet and preserve map space. */
+#s-nav { gap: 8px; }
+#s-nav .btn { min-height: 44px; padding: 10px 12px; font-size: 15px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+#entry-near { display: flex; flex-direction: column; gap: 6px; }
+#entry-near .label { color: var(--route); }
+#s-entry { gap: 10px; }
+#s-entry h2 { font-size: 20px; line-height: 1.4; }
+#s-entry p { font-size: 14px; line-height: 1.5; }
+.entry-option { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 10px; align-items: center; width: 100%; border: 1px solid var(--line); background: var(--soft); border-radius: 16px; padding: 12px 14px; min-height: 60px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.entry-option strong { font-size: 16px; }
+.entry-option small { grid-column: 1; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.entry-option > span { grid-column: 2; grid-row: 1 / 3; font-size: 24px; color: var(--route); }
+#s-entry .btn { min-height: 44px; padding: 11px; font-size: 15px; line-height: 1.4; }
+#entry-resume { white-space: normal; overflow-wrap: anywhere; }
+.banner { flex-wrap: wrap; }
+.banner button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@media (max-height: 600px) { #s-nav { padding-top: 12px; gap: 6px; } #s-entry { padding-top: 12px; } }
+
+#i-checkpoints { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; margin-top: 7px; padding: 7px 10px; border-radius: 10px; background: var(--soft); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+#i-checkpoints-route { color: var(--route); font-weight: 700; }
+#i-checkpoints-wrong { color: var(--muted); font-size: 12px; }
